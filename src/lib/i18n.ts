@@ -1,0 +1,108 @@
+export const t = {
+  appName: 'ElmShiftr',
+  appTagline: 'ניהול משמרות — חדר הבריחה',
+
+  nav: {
+    home: 'בית',
+    schedule: 'לוח משמרות',
+    request: 'בקשת משמרת',
+    cancel: 'בקשת ביטול',
+    adminLogin: 'כניסת מנהל',
+    adminDashboard: 'דשבורד',
+    logout: 'יציאה',
+  },
+
+  shiftType: {
+    morning: 'בוקר (עד 18:00)',
+    evening: 'ערב (18:10–03:30)',
+  },
+
+  status: {
+    pending: 'ממתין',
+    approved: 'מאושר',
+    rejected: 'נדחה',
+    canceled: 'מבוטל',
+  },
+
+  form: {
+    name: 'שם מלא',
+    namePlaceholder: 'הכנס שמך',
+    date: 'תאריך',
+    shiftType: 'סוג משמרת',
+    notes: 'הערות',
+    notesPlaceholder: 'הערות נוספות (אופציונלי)',
+    reason: 'סיבת ביטול',
+    reasonPlaceholder: 'תאר את סיבת הביטול (אופציונלי)',
+    submit: 'שלח בקשה',
+    submitting: 'שולח...',
+    email: 'דואר אלקטרוני',
+    password: 'סיסמה',
+    login: 'התחבר',
+    loggingIn: 'מתחבר...',
+  },
+
+  pages: {
+    home: {
+      title: 'ניהול משמרות',
+      subtitle: 'מערכת ניהול משמרות לצוות חדר הבריחה',
+      requestShift: 'בקשת משמרת',
+      viewSchedule: 'לוח משמרות',
+      cancelShift: 'בקשת ביטול',
+      requestDesc: 'שלח בקשה למשמרת עתידית',
+      scheduleDesc: 'צפה במשמרות המאושרות',
+      cancelDesc: 'בקש לבטל משמרת מאושרת',
+    },
+    request: {
+      title: 'בקשת משמרת',
+      subtitle: 'מלא את הפרטים ונחזור אליך בהקדם',
+      success: 'הבקשה נשלחה בהצלחה',
+      successDesc: 'בקשתך התקבלה ותיסקר על ידי המנהל.',
+      duplicateWarning: 'נראה שכבר קיימת בקשה פעילה עבור הפרטים האלה.',
+    },
+    schedule: {
+      title: 'לוח משמרות',
+      subtitle: 'משמרות מאושרות',
+      empty: 'אין משמרות מאושרות כרגע',
+      emptyDesc: 'כשמשמרות יאושרו הן יופיעו כאן.',
+      lastUpdated: 'עודכן',
+    },
+    cancel: {
+      title: 'בקשת ביטול משמרת',
+      subtitle: 'מלא את פרטי המשמרת שברצונך לבטל',
+      success: 'הבקשה נשלחה בהצלחה',
+      successDesc: 'בקשת הביטול התקבלה ותיסקר על ידי המנהל.',
+      notFound: 'לא נמצאה משמרת מאושרת עם הפרטים שהזנת.',
+    },
+    adminLogin: {
+      title: 'כניסת מנהל',
+      subtitle: 'מערכת ניהול משמרות',
+    },
+    admin: {
+      title: 'דשבורד ניהול',
+      tabs: {
+        pending: 'בקשות ממתינות',
+        approved: 'לוח מאושר',
+        cancellations: 'בקשות ביטול',
+      },
+      pendingEmpty: 'אין בקשות ממתינות',
+      approvedEmpty: 'אין משמרות מאושרות',
+      cancellationsEmpty: 'אין בקשות ביטול ממתינות',
+      approve: 'אשר',
+      reject: 'דחה',
+      cancel: 'בטל משמרת',
+      restore: 'שחזר',
+      approveCancel: 'אשר ביטול',
+      rejectCancel: 'דחה ביטול',
+      edit: 'ערוך',
+      save: 'שמור',
+      discard: 'בטל',
+    },
+  },
+
+  errors: {
+    required: 'נא למלא את כל השדות החובה',
+    generic: 'אירעה שגיאה. נסה שוב.',
+    loginFailed: 'כניסה נכשלה. בדוק את הפרטים.',
+    notFound: 'לא נמצא',
+  },
+} as const
