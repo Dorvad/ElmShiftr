@@ -102,6 +102,16 @@ export default function AdminPage() {
     await supabase.from('cancel_requests').update({ status: 'rejected' }).eq('id', id)
   })
 
+  const resetBoard = () => act('reset-board', async () => {
+    if (!window.confirm(t.pages.admin.resetBoardConfirm)) return
+
+    await Promise.all([
+      supabase.from('approved_shifts').delete().neq('id', ''),
+      supabase.from('shift_requests').delete().neq('id', ''),
+      supabase.from('cancel_requests').delete().neq('id', ''),
+    ])
+  })
+
   const startEdit = (req: ShiftRequest) => {
     setEditingId(req.id)
     setEditName(req.name)
@@ -216,6 +226,13 @@ export default function AdminPage() {
       {/* Approved */}
       {tab === 'approved' && (
         <div className="flex flex-col gap-3">
+          <div className="card p-4 border border-ember-200 bg-ember-50/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm text-ink-600">{t.pages.admin.resetBoardHint}</p>
+            <button onClick={resetBoard} disabled={actionLoading === 'reset-board'} className="btn-danger w-full sm:w-auto">
+              {actionLoading === 'reset-board' ? <Spinner size="sm" /> : t.pages.admin.resetBoard}
+            </button>
+          </div>
+
           {approvedShifts.length === 0 ? <EmptyState title={t.pages.admin.approvedEmpty} /> :
             approvedShifts.map(shift => (
               <div key={shift.id} className={`card p-4 flex items-center justify-between gap-4 ${shift.status === 'canceled' ? 'opacity-50' : ''}`}>
