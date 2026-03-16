@@ -13,8 +13,8 @@ export const t = {
   },
 
   shiftType: {
-    morning: 'בוקר (עד 18:00)',
-    evening: 'ערב (18:10–03:30)',
+    morning: 'בוקר',
+    evening: 'ערב',
   },
 
   status: {

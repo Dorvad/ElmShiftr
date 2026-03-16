@@ -181,7 +181,6 @@ export default function RequestPage() {
                               : 'border-ink-200 text-ink-600 hover:border-ink-300 bg-white'
                           }`}>
                           <div className="font-semibold">{type === 'morning' ? 'בוקר' : 'ערב'}</div>
-                          <div className="opacity-60 mt-0.5">{type === 'morning' ? 'עד 18:00' : '18:10–03:30'}</div>
                         </button>
                       ))}
                     </div>
