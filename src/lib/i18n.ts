@@ -96,6 +96,9 @@ export const t = {
       edit: 'ערוך',
       save: 'שמור',
       discard: 'בטל',
+      resetBoard: 'איפוס לוח',
+      resetBoardConfirm: 'אתה בטוח שברצונך לאפס את הלוח?',
+      resetBoardHint: 'מוחק את כל הבקשות והמשמרות בלחיצה אחת.',
     },
   },
 
