@@ -37,6 +37,11 @@ export default function SchedulePage() {
   const grouped = groupByDate(shifts)
   const sortedDates = Object.keys(grouped).sort()
 
+  const today = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })
+  )
+  const todayStr = today.toISOString().split('T')[0]
+
   const toggle = (date: string) => {
     setExpanded(prev => {
       const next = new Set(prev)
@@ -75,12 +80,28 @@ export default function SchedulePage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedDates.map(date =>
-                  grouped[date].map((shift, idx) => (
+                {sortedDates.map(date => {
+                  const isToday = date === todayStr
+
+                  return grouped[date].map((shift, idx) => (
                     <tr key={shift.id} className="border-b border-ink-50 hover:bg-parchment/40 transition-colors">
                       {idx === 0 && (
-                        <td className="px-5 py-3.5 font-display font-semibold text-ink-700 text-sm align-top" rowSpan={grouped[date].length}>
-                          {formatDateHebrew(date)}
+                        <td
+                          className={`px-5 py-3.5 font-display font-semibold text-sm align-top ${
+                            isToday
+                              ? 'bg-yellow-100 text-yellow-900 ring-1 ring-yellow-300'
+                              : 'text-ink-700'
+                          }`}
+                          rowSpan={grouped[date].length}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{formatDateHebrew(date)}</span>
+                            {isToday && (
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-900">
+                                היום
+                              </span>
+                            )}
+                          </div>
                         </td>
                       )}
                       <td className="px-5 py-3.5 font-medium text-ink-900">{shift.name}</td>
@@ -88,7 +109,7 @@ export default function SchedulePage() {
                       <td className="px-5 py-3.5 text-sm text-ink-400">{shift.notes || '—'}</td>
                     </tr>
                   ))
-                )}
+                })}
               </tbody>
             </table>
           </div>
@@ -97,12 +118,30 @@ export default function SchedulePage() {
           <div className="md:hidden flex flex-col gap-3">
             {sortedDates.map(date => {
               const isOpen = expanded.has(date)
+              const isToday = date === todayStr
+
               return (
-                <div key={date} className="card overflow-hidden">
-                  <button onClick={() => toggle(date)}
-                    className="w-full flex items-center justify-between px-4 py-4 hover:bg-parchment/40 transition-colors text-right">
+                <div
+                  key={date}
+                  className={`card overflow-hidden ${
+                    isToday ? 'ring-1 ring-yellow-300 bg-yellow-50/40' : ''
+                  }`}
+                >
+                  <button
+                    onClick={() => toggle(date)}
+                    className="w-full flex items-center justify-between px-4 py-4 hover:bg-parchment/40 transition-colors text-right"
+                  >
                     <div className="flex items-center gap-3">
-                      <span className="font-display font-semibold text-ink-800 text-sm">{formatDateHebrew(date)}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-display font-semibold text-ink-800 text-sm">
+                          {formatDateHebrew(date)}
+                        </span>
+                        {isToday && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-900">
+                            היום
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs font-mono text-ink-400">{grouped[date].length} משמרות</span>
                     </div>
                     <span className={`text-ink-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▾</span>
