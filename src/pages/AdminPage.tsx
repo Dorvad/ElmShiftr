@@ -21,6 +21,8 @@ export default function AdminPage() {
   const [editDate, setEditDate] = useState('')
   const [editShiftType, setEditShiftType] = useState<ShiftType>('evening')
   const [editNotes, setEditNotes] = useState('')
+  const [notesEditingKey, setNotesEditingKey] = useState<string | null>(null)
+  const [notesDraft, setNotesDraft] = useState('')
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) navigate('/admin/login')
@@ -115,6 +117,26 @@ export default function AdminPage() {
     await supabase.from('approved_shifts').delete().eq('id', shift.id)
   })
 
+  const startNotesEdit = (key: string, currentNotes: string | null) => {
+    setNotesEditingKey(key)
+    setNotesDraft(currentNotes || '')
+  }
+
+  const cancelNotesEdit = () => {
+    setNotesEditingKey(null)
+    setNotesDraft('')
+  }
+
+  const savePendingNotes = (req: ShiftRequest) => act(`pending-notes-${req.id}`, async () => {
+    await supabase.from('shift_requests').update({ notes: notesDraft.trim() || null }).eq('id', req.id)
+    cancelNotesEdit()
+  })
+
+  const saveApprovedNotes = (shift: ApprovedShift) => act(`approved-notes-${shift.id}`, async () => {
+    await supabase.from('approved_shifts').update({ notes: notesDraft.trim() || null }).eq('id', shift.id)
+    cancelNotesEdit()
+  })
+
   const startEdit = (req: ShiftRequest) => {
     setEditingId(req.id)
     setEditName(req.name)
@@ -206,7 +228,28 @@ export default function AdminPage() {
                         <ShiftBadge type={req.shift_type} />
                       </div>
                       <span className="text-sm text-ink-600">{formatDateHebrew(req.date)}</span>
-                      {req.notes && <span className="text-sm text-ink-500 italic">"{req.notes}"</span>}
+                      {notesEditingKey === `pending-${req.id}` ? (
+                        <div className="flex flex-col gap-2 max-w-md">
+                          <textarea className="input resize-none" rows={2} value={notesDraft} onChange={e => setNotesDraft(e.target.value)} placeholder={t.form.notesPlaceholder} />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => savePendingNotes(req)}
+                              disabled={actionLoading === `pending-notes-${req.id}`}
+                              className="btn-success text-sm px-3 py-2"
+                            >
+                              {actionLoading === `pending-notes-${req.id}` ? <Spinner size="sm" /> : t.pages.admin.save}
+                            </button>
+                            <button onClick={cancelNotesEdit} className="btn-secondary text-sm px-3 py-2">{t.pages.admin.discard}</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {req.notes && <span className="text-sm text-ink-500 italic">"{req.notes}"</span>}
+                          <button onClick={() => startNotesEdit(`pending-${req.id}`, req.notes)} className="text-xs text-ink-500 hover:text-ink-700 underline text-right w-fit">
+                            {req.notes ? 'ערוך הערות' : 'הוסף הערות'}
+                          </button>
+                        </>
+                      )}
                       <span className="text-xs font-mono text-ink-400">התקבל: {formatDateTime(req.created_at)}</span>
                     </div>
                     <div className="flex gap-2 shrink-0 flex-wrap">
@@ -248,7 +291,28 @@ export default function AdminPage() {
                     <StatusBadge status={shift.status} />
                   </div>
                   <span className="text-sm text-ink-500">{formatDateHebrew(shift.date)}</span>
-                  {shift.notes && <span className="text-xs text-ink-400 italic">"{shift.notes}"</span>}
+                  {notesEditingKey === `approved-${shift.id}` ? (
+                    <div className="flex flex-col gap-2 max-w-md">
+                      <textarea className="input resize-none" rows={2} value={notesDraft} onChange={e => setNotesDraft(e.target.value)} placeholder={t.form.notesPlaceholder} />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => saveApprovedNotes(shift)}
+                          disabled={actionLoading === `approved-notes-${shift.id}`}
+                          className="btn-success text-sm px-3 py-2"
+                        >
+                          {actionLoading === `approved-notes-${shift.id}` ? <Spinner size="sm" /> : t.pages.admin.save}
+                        </button>
+                        <button onClick={cancelNotesEdit} className="btn-secondary text-sm px-3 py-2">{t.pages.admin.discard}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {shift.notes && <span className="text-xs text-ink-400 italic">"{shift.notes}"</span>}
+                      <button onClick={() => startNotesEdit(`approved-${shift.id}`, shift.notes)} className="text-xs text-ink-500 hover:text-ink-700 underline text-right w-fit">
+                        {shift.notes ? 'ערוך הערות' : 'הוסף הערות'}
+                      </button>
+                    </>
+                  )}
                 </div>
                 <div className="shrink-0 flex gap-2">
                   {shift.status === 'approved' ? (
