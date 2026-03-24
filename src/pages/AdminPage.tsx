@@ -21,8 +21,6 @@ export default function AdminPage() {
   const [editDate, setEditDate] = useState('')
   const [editShiftType, setEditShiftType] = useState<ShiftType>('evening')
   const [editNotes, setEditNotes] = useState('')
-  const todayLocalISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
-
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) navigate('/admin/login')
@@ -111,11 +109,6 @@ export default function AdminPage() {
       supabase.from('shift_requests').delete().neq('id', ''),
       supabase.from('cancel_requests').delete().neq('id', ''),
     ])
-  })
-
-  const deletePastShifts = () => act('delete-past-shifts', async () => {
-    if (!window.confirm(t.pages.admin.deletePastShiftsConfirm)) return
-    await supabase.from('approved_shifts').delete().lt('date', todayLocalISO)
   })
 
   const deleteShift = (shift: ApprovedShift) => act(`delete-shift-${shift.id}`, async () => {
@@ -236,14 +229,8 @@ export default function AdminPage() {
       {/* Approved */}
       {tab === 'approved' && (
         <div className="flex flex-col gap-3">
-          <div className="card p-4 border border-ember-200 bg-ember-50/40 flex flex-col gap-3">
+          <div className="card p-4 border border-ember-200 bg-ember-50/40">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-sm text-ink-600">{t.pages.admin.deletePastShiftsHint}</p>
-              <button onClick={deletePastShifts} disabled={actionLoading === 'delete-past-shifts'} className="btn-secondary w-full sm:w-auto">
-                {actionLoading === 'delete-past-shifts' ? <Spinner size="sm" /> : t.pages.admin.deletePastShifts}
-              </button>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-ember-200 pt-3">
               <p className="text-sm text-ink-600">{t.pages.admin.resetBoardHint}</p>
               <button onClick={resetBoard} disabled={actionLoading === 'reset-board'} className="btn-danger w-full sm:w-auto">
                 {actionLoading === 'reset-board' ? <Spinner size="sm" /> : t.pages.admin.resetBoard}
@@ -273,11 +260,9 @@ export default function AdminPage() {
                       {actionLoading === shift.id ? <Spinner size="sm" /> : t.pages.admin.restore}
                     </button>
                   )}
-                  {shift.date < todayLocalISO && (
-                    <button onClick={() => deleteShift(shift)} disabled={actionLoading === `delete-shift-${shift.id}`} className="btn-secondary text-sm px-3 py-2">
-                      {actionLoading === `delete-shift-${shift.id}` ? <Spinner size="sm" /> : t.pages.admin.deleteShift}
-                    </button>
-                  )}
+                  <button onClick={() => deleteShift(shift)} disabled={actionLoading === `delete-shift-${shift.id}`} className="btn-secondary text-sm px-3 py-2">
+                    {actionLoading === `delete-shift-${shift.id}` ? <Spinner size="sm" /> : t.pages.admin.deleteShift}
+                  </button>
                 </div>
               </div>
             ))
