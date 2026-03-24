@@ -21,6 +21,7 @@ export default function AdminPage() {
   const [editDate, setEditDate] = useState('')
   const [editShiftType, setEditShiftType] = useState<ShiftType>('evening')
   const [editNotes, setEditNotes] = useState('')
+  const todayLocalISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -110,6 +111,15 @@ export default function AdminPage() {
       supabase.from('shift_requests').delete().neq('id', ''),
       supabase.from('cancel_requests').delete().neq('id', ''),
     ])
+  })
+
+  const deletePastShifts = () => act('delete-past-shifts', async () => {
+    if (!window.confirm(t.pages.admin.deletePastShiftsConfirm)) return
+    await supabase.from('approved_shifts').delete().lt('date', todayLocalISO)
+  })
+
+  const deleteShift = (shift: ApprovedShift) => act(`delete-shift-${shift.id}`, async () => {
+    await supabase.from('approved_shifts').delete().eq('id', shift.id)
   })
 
   const startEdit = (req: ShiftRequest) => {
@@ -226,11 +236,19 @@ export default function AdminPage() {
       {/* Approved */}
       {tab === 'approved' && (
         <div className="flex flex-col gap-3">
-          <div className="card p-4 border border-ember-200 bg-ember-50/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p className="text-sm text-ink-600">{t.pages.admin.resetBoardHint}</p>
-            <button onClick={resetBoard} disabled={actionLoading === 'reset-board'} className="btn-danger w-full sm:w-auto">
-              {actionLoading === 'reset-board' ? <Spinner size="sm" /> : t.pages.admin.resetBoard}
-            </button>
+          <div className="card p-4 border border-ember-200 bg-ember-50/40 flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-ink-600">{t.pages.admin.deletePastShiftsHint}</p>
+              <button onClick={deletePastShifts} disabled={actionLoading === 'delete-past-shifts'} className="btn-secondary w-full sm:w-auto">
+                {actionLoading === 'delete-past-shifts' ? <Spinner size="sm" /> : t.pages.admin.deletePastShifts}
+              </button>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-ember-200 pt-3">
+              <p className="text-sm text-ink-600">{t.pages.admin.resetBoardHint}</p>
+              <button onClick={resetBoard} disabled={actionLoading === 'reset-board'} className="btn-danger w-full sm:w-auto">
+                {actionLoading === 'reset-board' ? <Spinner size="sm" /> : t.pages.admin.resetBoard}
+              </button>
+            </div>
           </div>
 
           {approvedShifts.length === 0 ? <EmptyState title={t.pages.admin.approvedEmpty} /> :
@@ -245,7 +263,7 @@ export default function AdminPage() {
                   <span className="text-sm text-ink-500">{formatDateHebrew(shift.date)}</span>
                   {shift.notes && <span className="text-xs text-ink-400 italic">"{shift.notes}"</span>}
                 </div>
-                <div className="shrink-0">
+                <div className="shrink-0 flex gap-2">
                   {shift.status === 'approved' ? (
                     <button onClick={() => cancelShift(shift)} disabled={actionLoading === shift.id} className="btn-danger">
                       {actionLoading === shift.id ? <Spinner size="sm" /> : t.pages.admin.cancel}
@@ -253,6 +271,11 @@ export default function AdminPage() {
                   ) : (
                     <button onClick={() => restoreShift(shift)} disabled={actionLoading === shift.id} className="btn-secondary text-sm px-3 py-2">
                       {actionLoading === shift.id ? <Spinner size="sm" /> : t.pages.admin.restore}
+                    </button>
+                  )}
+                  {shift.date < todayLocalISO && (
+                    <button onClick={() => deleteShift(shift)} disabled={actionLoading === `delete-shift-${shift.id}`} className="btn-secondary text-sm px-3 py-2">
+                      {actionLoading === `delete-shift-${shift.id}` ? <Spinner size="sm" /> : t.pages.admin.deleteShift}
                     </button>
                   )}
                 </div>

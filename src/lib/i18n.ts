@@ -99,6 +99,10 @@ export const t = {
       resetBoard: 'איפוס לוח',
       resetBoardConfirm: 'אתה בטוח שברצונך לאפס את הלוח?',
       resetBoardHint: 'מוחק את כל הבקשות והמשמרות בלחיצה אחת.',
+      deletePastShifts: 'מחק משמרות עבר',
+      deletePastShiftsConfirm: 'למחוק את כל משמרות העבר מהלוח המאושר?',
+      deletePastShiftsHint: 'מוחק רק משמרות עם תאריך שכבר עבר.',
+      deleteShift: 'מחק',
     },
   },
 
