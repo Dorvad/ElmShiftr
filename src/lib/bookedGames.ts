@@ -16,10 +16,22 @@ export interface BookedGamesResponse {
 }
 
 const BOOKED_GAMES_ENDPOINT = import.meta.env.VITE_BOOKED_GAMES_ENDPOINT as string | undefined
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
+
+function normalizeUrl(value: string | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
 
 export function getBookedGamesEndpoint(): string | null {
-  if (!BOOKED_GAMES_ENDPOINT) return null
-  return BOOKED_GAMES_ENDPOINT
+  const configuredEndpoint = normalizeUrl(BOOKED_GAMES_ENDPOINT)
+  if (configuredEndpoint) return configuredEndpoint
+
+  const supabaseUrl = normalizeUrl(SUPABASE_URL)
+  if (!supabaseUrl) return null
+
+  return `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/get-today-booked-games`
 }
 
 export async function fetchTodayBookedGames(signal?: AbortSignal): Promise<BookedGamesResponse> {
