@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchTodayBookedGames, type BookedGamesResponse, type VenueBookedGames } from '../lib/bookedGames'
 import { t } from '../lib/i18n'
 
 const cards = [
@@ -24,74 +22,20 @@ const cards = [
   },
 ]
 
-function VenueCard({ venue }: { venue: VenueBookedGames }) {
-  const hasGames = venue.orderedGames.length > 0
-
-  return (
-    <div className="rounded-xl border border-ink-100 bg-parchment/60 p-4">
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <h3 className="font-semibold text-ink-900">{venue.venueName}</h3>
-        {venue.error ? (
-          <span className="text-xs px-2 py-1 rounded-full bg-red-50 border border-red-200 text-red-700">שגיאה</span>
-        ) : (
-          <span className="text-xs px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">עודכן</span>
-        )}
-      </div>
-
-      {venue.error ? (
-        <p className="text-sm text-red-700">{venue.error}</p>
-      ) : hasGames ? (
-        <ul className="grid grid-cols-2 gap-2">
-          {venue.orderedGames.map((time) => (
-            <li key={`${venue.venueKey}-${time}`} className="text-sm text-ink-800 bg-white rounded-lg border border-ink-100 px-2 py-1.5 text-center font-mono">
-              {time}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-ink-500">לא נמצאו משחקים שהוזמנו להיום.</p>
-      )}
-    </div>
-  )
-}
+const manualVenueLinks = [
+  {
+    venueKey: 'butchery',
+    venueName: 'הקצביה',
+    sourceUrl: 'https://www.escaperoom.co.il/tel-aviv-the-butchery',
+  },
+  {
+    venueKey: 'elm_street',
+    venueName: 'אלם סטריט',
+    sourceUrl: 'https://www.escaperoom.co.il/tel-Aviv-elm-street',
+  },
+]
 
 export default function HomePage() {
-  const [bookedGames, setBookedGames] = useState<BookedGamesResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const loadBookedGames = useCallback(async (signal?: AbortSignal) => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await fetchTodayBookedGames(signal)
-      setBookedGames(data)
-    } catch (err) {
-      if (signal?.aborted) return
-      setError(err instanceof Error ? err.message : 'לא ניתן לטעון את נתוני המשחקים כרגע.')
-    } finally {
-      if (!signal?.aborted) setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    void loadBookedGames(controller.signal)
-
-    return () => controller.abort()
-  }, [loadBookedGames])
-
-  const lastUpdated = useMemo(() => {
-    if (!bookedGames?.lastUpdatedAt) return ''
-    return new Date(bookedGames.lastUpdatedAt).toLocaleString('he-IL', {
-      timeZone: 'Asia/Jerusalem',
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }, [bookedGames?.lastUpdatedAt])
-
   return (
     <div className="animate-fade-in">
       <div className="text-center mb-12 pt-4">
@@ -124,44 +68,27 @@ export default function HomePage() {
 
       <section className="max-w-3xl mx-auto mt-8">
         <div className="card p-5 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
-            <div>
-              <p className="text-sm font-semibold text-ink-800">משחקים שהוזמנו להיום</p>
-              <p className="text-xs text-ink-500 mt-1">
-                תאריך: {bookedGames?.date ?? '—'} · אזור זמן: ישראל (Asia/Jerusalem)
-              </p>
-            </div>
-            <button type="button" onClick={() => void loadBookedGames()} className="btn-secondary text-sm self-start">
-              רענון
-            </button>
+          <div className="mb-5">
+            <p className="text-sm font-semibold text-ink-800">בדיקה ידנית של המשחקים שהוזמנו להיום</p>
+            <p className="text-xs text-ink-500 mt-1">
+              בדקו ישירות בכל אתר כדי לראות אילו שעות כבר נתפסו.
+            </p>
           </div>
 
-          {loading ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="h-28 rounded-xl border border-ink-100 bg-parchment animate-pulse" />
-              <div className="h-28 rounded-xl border border-ink-100 bg-parchment animate-pulse" />
-            </div>
-          ) : error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {bookedGames?.venues.map((venue) => (
-                  <VenueCard key={venue.venueKey} venue={venue} />
-                ))}
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500">
-                <span>
-                  סטטוס טעינה: {bookedGames?.status === 'partial_success' ? 'חלקי' : 'מלא'}
-                  {bookedGames?.stale ? ' · נתון מגובה (Cache)' : ''}
-                </span>
-                {lastUpdated && <span>עודכן לאחרונה: {lastUpdated}</span>}
-              </div>
-            </>
-          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {manualVenueLinks.map((venue) => (
+              <a
+                key={venue.venueKey}
+                href={venue.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl border border-ink-100 bg-parchment/60 p-4 hover:bg-parchment transition-colors"
+              >
+                <p className="font-semibold text-ink-900">{venue.venueName}</p>
+                <p className="text-xs text-ink-500 mt-1">מעבר לעמוד ההזמנות</p>
+              </a>
+            ))}
+          </div>
         </div>
       </section>
     </div>
