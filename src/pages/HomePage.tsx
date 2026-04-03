@@ -52,6 +52,32 @@ export default function HomePage() {
           </Link>
         ))}
       </div>
+
+      <section className="max-w-3xl mx-auto mt-8">
+        <div className="card p-5 sm:p-6">
+          <p className="text-sm font-medium text-ink-600 mb-4 text-center sm:text-right">
+            בדיקת משחקים שהוזמנו
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <a
+              href="https://www.escaperoom.co.il/tel-aviv-the-butchery"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary w-full"
+            >
+              בדיקת משחקים - הקצביה
+            </a>
+            <a
+              href="https://www.escaperoom.co.il/tel-Aviv-elm-street"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary w-full"
+            >
+              בדיקת משחקים - אלם סטריט
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
