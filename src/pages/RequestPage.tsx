@@ -17,6 +17,8 @@ function createRow(): ShiftRow {
   return { id: rowCounter++, date: '', shiftType: 'evening', notes: '' }
 }
 
+const employeeNames = ['דור', 'יהב', 'אביב', 'סטיבן'] as const
+
 export default function RequestPage() {
   const [name, setName] = useState('')
   const [rows, setRows] = useState<ShiftRow[]>([createRow()])
@@ -121,14 +123,17 @@ export default function RequestPage() {
           {/* Name */}
           <div>
             <label className="label">{t.form.name} *</label>
-            <input
+            <select
               className="input"
-              type="text"
-              placeholder={t.form.namePlaceholder}
               value={name}
               onChange={e => setName(e.target.value)}
               required
-            />
+            >
+              <option value="">בחר עובד</option>
+              {employeeNames.map(employeeName => (
+                <option key={employeeName} value={employeeName}>{employeeName}</option>
+              ))}
+            </select>
           </div>
 
           {/* Shift rows */}

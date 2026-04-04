@@ -107,10 +107,16 @@ export default function AdminPage() {
     if (!window.confirm(t.pages.admin.resetBoardConfirm)) return
 
     await Promise.all([
-      supabase.from('approved_shifts').delete().neq('id', ''),
-      supabase.from('shift_requests').delete().neq('id', ''),
-      supabase.from('cancel_requests').delete().neq('id', ''),
+      supabase.from('approved_shifts').delete().not('id', 'is', null),
+      supabase.from('shift_requests').delete().not('id', 'is', null),
+      supabase.from('cancel_requests').delete().not('id', 'is', null),
     ])
+  })
+
+  const deleteCanceledShifts = () => act('delete-canceled-shifts', async () => {
+    if (!window.confirm(t.pages.admin.deleteCanceledShiftsConfirm)) return
+
+    await supabase.from('approved_shifts').delete().eq('status', 'canceled')
   })
 
   const deleteShift = (shift: ApprovedShift) => act(`delete-shift-${shift.id}`, async () => {
@@ -275,9 +281,14 @@ export default function AdminPage() {
           <div className="card p-4 border border-ember-200 bg-ember-50/40">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-sm text-ink-600">{t.pages.admin.resetBoardHint}</p>
-              <button onClick={resetBoard} disabled={actionLoading === 'reset-board'} className="btn-danger w-full sm:w-auto">
-                {actionLoading === 'reset-board' ? <Spinner size="sm" /> : t.pages.admin.resetBoard}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <button onClick={deleteCanceledShifts} disabled={actionLoading === 'delete-canceled-shifts'} className="btn-secondary w-full sm:w-auto">
+                  {actionLoading === 'delete-canceled-shifts' ? <Spinner size="sm" /> : t.pages.admin.deleteCanceledShifts}
+                </button>
+                <button onClick={resetBoard} disabled={actionLoading === 'reset-board'} className="btn-danger w-full sm:w-auto">
+                  {actionLoading === 'reset-board' ? <Spinner size="sm" /> : t.pages.admin.resetBoard}
+                </button>
+              </div>
             </div>
           </div>
 
