@@ -1,14 +1,28 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { supabase, type ApprovedShift, type ShiftType } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { formatDateHebrew, groupByDate } from '../lib/dateHelpers'
 import { LoadingState, EmptyState, ShiftBadge } from '../components/ui'
+
+type ViewMode = 'list' | 'calendar'
+type ShiftFilter = 'all' | ShiftType
+
+function toDateKey(date: Date) {
+  return date.toISOString().split('T')[0]
+}
 
 export default function SchedulePage() {
   const [shifts, setShifts] = useState<ApprovedShift[]>([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [selectedName, setSelectedName] = useState('all')
+  const [selectedShiftType, setSelectedShiftType] = useState<ShiftFilter>('all')
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
+    return new Date(now.getFullYear(), now.getMonth(), 1)
+  })
 
   const fetchShifts = useCallback(async () => {
     const { data, error } = await supabase
@@ -34,13 +48,27 @@ export default function SchedulePage() {
     return () => { supabase.removeChannel(channel); clearInterval(interval) }
   }, [fetchShifts])
 
-  const grouped = groupByDate(shifts)
+  const uniqueNames = useMemo(
+    () => Array.from(new Set(shifts.map(shift => shift.name))).sort((a, b) => a.localeCompare(b, 'he')),
+    [shifts],
+  )
+
+  const filteredShifts = useMemo(
+    () => shifts.filter(shift => {
+      const matchesName = selectedName === 'all' || shift.name === selectedName
+      const matchesType = selectedShiftType === 'all' || shift.shift_type === selectedShiftType
+      return matchesName && matchesType
+    }),
+    [shifts, selectedName, selectedShiftType],
+  )
+
+  const grouped = groupByDate(filteredShifts)
   const sortedDates = Object.keys(grouped).sort()
 
   const today = new Date(
     new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })
   )
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = toDateKey(today)
 
   const toggle = (date: string) => {
     setExpanded(prev => {
@@ -48,6 +76,35 @@ export default function SchedulePage() {
       next.has(date) ? next.delete(date) : next.add(date)
       return next
     })
+  }
+
+  const monthLabel = calendarMonth.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
+
+  const calendarCells = useMemo(() => {
+    const firstDay = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1)
+    const startWeekDay = firstDay.getDay()
+    const gridStart = new Date(firstDay)
+    gridStart.setDate(firstDay.getDate() - startWeekDay)
+
+    return Array.from({ length: 42 }, (_, idx) => {
+      const date = new Date(gridStart)
+      date.setDate(gridStart.getDate() + idx)
+      const dateKey = toDateKey(date)
+      return {
+        date,
+        dateKey,
+        isCurrentMonth: date.getMonth() === calendarMonth.getMonth(),
+        shifts: grouped[dateKey] || [],
+      }
+    })
+  }, [calendarMonth, grouped])
+
+  const goPrevMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+  }
+
+  const goNextMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
   }
 
   if (loading) return <LoadingState message="טוען לוח משמרות..." />
@@ -64,9 +121,56 @@ export default function SchedulePage() {
         </span>
       </div>
 
-      {shifts.length === 0 ? (
+      <div className="card p-4 mb-4 flex flex-col gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label className="label text-xs">סינון לפי שם</label>
+            <select className="input" value={selectedName} onChange={e => setSelectedName(e.target.value)}>
+              <option value="all">כל העובדים</option>
+              {uniqueNames.map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label text-xs">סינון לפי משמרת</label>
+            <select
+              className="input"
+              value={selectedShiftType}
+              onChange={e => setSelectedShiftType(e.target.value as ShiftFilter)}
+            >
+              <option value="all">בוקר + ערב</option>
+              <option value="morning">בוקר</option>
+              <option value="evening">ערב</option>
+            </select>
+          </div>
+          <div>
+            <label className="label text-xs">תצוגה</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                  viewMode === 'list' ? 'border-ink-700 bg-ink-50 text-ink-900' : 'border-ink-200 text-ink-600 bg-white'
+                }`}
+              >
+                רשימה
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('calendar')}
+                className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                  viewMode === 'calendar' ? 'border-ink-700 bg-ink-50 text-ink-900' : 'border-ink-200 text-ink-600 bg-white'
+                }`}
+              >
+                לוח שנה
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {filteredShifts.length === 0 ? (
         <EmptyState title={t.pages.schedule.empty} description={t.pages.schedule.emptyDesc} />
-      ) : (
+      ) : viewMode === 'list' ? (
         <>
           {/* Desktop table */}
           <div className="hidden md:block card overflow-hidden">
@@ -164,6 +268,44 @@ export default function SchedulePage() {
             })}
           </div>
         </>
+      ) : (
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-4">
+            <button type="button" className="btn-secondary text-sm px-3 py-2" onClick={goPrevMonth}>◀</button>
+            <h2 className="font-display text-lg font-semibold text-ink-900">{monthLabel}</h2>
+            <button type="button" className="btn-secondary text-sm px-3 py-2" onClick={goNextMonth}>▶</button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1 text-center text-xs font-mono text-ink-500 mb-2">
+            {['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'].map(day => <div key={day}>{day}</div>)}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {calendarCells.map(cell => {
+              const isToday = cell.dateKey === todayStr
+              return (
+                <div
+                  key={cell.dateKey}
+                  className={`min-h-24 rounded-lg border p-1.5 ${
+                    cell.isCurrentMonth ? 'bg-white border-ink-100' : 'bg-ink-50 border-ink-100 opacity-50'
+                  } ${isToday ? 'ring-1 ring-yellow-300' : ''}`}
+                >
+                  <div className="text-xs font-mono text-ink-500 mb-1">{cell.date.getDate()}</div>
+                  <div className="flex flex-col gap-1">
+                    {cell.shifts.slice(0, 3).map(shift => (
+                      <div key={shift.id} className="text-[11px] rounded px-1 py-0.5 bg-parchment border border-ink-100 truncate">
+                        {shift.name} · {shift.shift_type === 'morning' ? 'בוקר' : 'ערב'}
+                      </div>
+                    ))}
+                    {cell.shifts.length > 3 && (
+                      <div className="text-[10px] text-ink-400">+{cell.shifts.length - 3} נוספות</div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
     </div>
   )

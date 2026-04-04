@@ -102,6 +102,8 @@ export const t = {
       deletePastShifts: 'מחק משמרות עבר',
       deletePastShiftsConfirm: 'למחוק את כל משמרות העבר מהלוח המאושר?',
       deletePastShiftsHint: 'מוחק רק משמרות עם תאריך שכבר עבר.',
+      deleteCanceledShifts: 'מחק משמרות מבוטלות',
+      deleteCanceledShiftsConfirm: 'למחוק את כל המשמרות המבוטלות?',
       deleteShift: 'מחק',
     },
   },
