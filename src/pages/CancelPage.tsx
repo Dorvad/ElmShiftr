@@ -3,8 +3,10 @@ import { supabase, type ShiftType } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { todayString } from '../lib/dateHelpers'
 import { Alert, Spinner } from '../components/ui'
+import { useEmployees } from '../hooks/useEmployees'
 
 export default function CancelPage() {
+  const { employees, loading: employeesLoading } = useEmployees()
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
   const [shiftType, setShiftType] = useState<ShiftType>('evening')
@@ -68,8 +70,18 @@ export default function CancelPage() {
 
           <div>
             <label className="label">{t.form.name} *</label>
-            <input className="input" type="text" placeholder={t.form.namePlaceholder}
-              value={name} onChange={e => setName(e.target.value)} required />
+            <select
+              className="input"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              required
+              disabled={employeesLoading}
+            >
+              <option value="">{employeesLoading ? 'טוען...' : 'בחר עובד'}</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.name}>{emp.name}</option>
+              ))}
+            </select>
           </div>
 
           <div>
