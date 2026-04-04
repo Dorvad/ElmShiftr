@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { supabase, type ShiftType } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { todayString } from '../lib/dateHelpers'
 import { Alert, Spinner } from '../components/ui'
+import { useEmployees } from '../hooks/useEmployees'
 
 interface ShiftRow {
   id: number
@@ -11,17 +12,19 @@ interface ShiftRow {
   notes: string
 }
 
-let rowCounter = 1
-
-function createRow(): ShiftRow {
-  return { id: rowCounter++, date: '', shiftType: 'evening', notes: '' }
-}
-
-const employeeNames = ['דור', 'יהב', 'אביב', 'סטיבן'] as const
-
 export default function RequestPage() {
+  const rowCounterRef = useRef(0)
+
+  const createRow = (): ShiftRow => ({
+    id: ++rowCounterRef.current,
+    date: '',
+    shiftType: 'evening',
+    notes: '',
+  })
+
+  const { employees, loading: employeesLoading } = useEmployees()
   const [name, setName] = useState('')
-  const [rows, setRows] = useState<ShiftRow[]>([createRow()])
+  const [rows, setRows] = useState<ShiftRow[]>(() => [createRow()])
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [successCount, setSuccessCount] = useState(0)
@@ -128,10 +131,11 @@ export default function RequestPage() {
               value={name}
               onChange={e => setName(e.target.value)}
               required
+              disabled={employeesLoading}
             >
-              <option value="">בחר עובד</option>
-              {employeeNames.map(employeeName => (
-                <option key={employeeName} value={employeeName}>{employeeName}</option>
+              <option value="">{employeesLoading ? 'טוען...' : 'בחר עובד'}</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.name}>{emp.name}</option>
               ))}
             </select>
           </div>

@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, type ShiftRequest, type ApprovedShift, type CancelRequest, type ShiftType } from '../lib/supabase'
+import { supabase, type ShiftRequest, type ApprovedShift, type CancelRequest, type ShiftType, type Employee } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { formatDateHebrew, formatDateTime } from '../lib/dateHelpers'
 import { ShiftBadge, StatusBadge, LoadingState, EmptyState, Alert, Spinner } from '../components/ui'
 
-type Tab = 'pending' | 'approved' | 'cancellations'
+type Tab = 'pending' | 'approved' | 'cancellations' | 'employees'
 
 export default function AdminPage() {
   const navigate = useNavigate()
@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [pendingRequests, setPendingRequests] = useState<ShiftRequest[]>([])
   const [approvedShifts, setApprovedShifts] = useState<ApprovedShift[]>([])
   const [cancelRequests, setCancelRequests] = useState<CancelRequest[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -23,6 +24,8 @@ export default function AdminPage() {
   const [editNotes, setEditNotes] = useState('')
   const [notesEditingKey, setNotesEditingKey] = useState<string | null>(null)
   const [notesDraft, setNotesDraft] = useState('')
+  const [newEmployeeName, setNewEmployeeName] = useState('')
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) navigate('/admin/login')
@@ -41,8 +44,17 @@ export default function AdminPage() {
     setLoading(false)
   }, [])
 
+  const fetchEmployees = useCallback(async () => {
+    const { data } = await supabase
+      .from('employees')
+      .select('*')
+      .order('sort_order')
+    if (data) setEmployees(data as Employee[])
+  }, [])
+
   useEffect(() => {
     fetchAll()
+    fetchEmployees()
     const channel = supabase.channel('admin_rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_requests' }, fetchAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'approved_shifts' }, fetchAll)
@@ -50,7 +62,7 @@ export default function AdminPage() {
       .subscribe()
     const interval = setInterval(fetchAll, 30000)
     return () => { supabase.removeChannel(channel); clearInterval(interval) }
-  }, [fetchAll])
+  }, [fetchAll, fetchEmployees])
 
   const act = async (id: string, fn: () => Promise<void>) => {
     setActionError(null)
@@ -151,10 +163,48 @@ export default function AdminPage() {
     setEditNotes(req.notes || '')
   }
 
+  const addEmployee = async () => {
+    const name = newEmployeeName.trim()
+    if (!name) return
+    setActionLoading('add-employee')
+    setActionError(null)
+    try {
+      const maxOrder = employees.length > 0 ? Math.max(...employees.map(e => e.sort_order)) : 0
+      const { error } = await supabase.from('employees').insert({ name, sort_order: maxOrder + 1 })
+      if (error) {
+        setActionError(error.code === '23505' ? t.pages.admin.employees.duplicateError : error.message)
+      } else {
+        setNewEmployeeName('')
+        await fetchEmployees()
+      }
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const toggleEmployee = async (emp: Employee) => {
+    const key = `toggle-emp-${emp.id}`
+    setActionLoading(key)
+    setActionError(null)
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({ is_active: !emp.is_active })
+        .eq('id', emp.id)
+      if (error) setActionError(error.message)
+      else await fetchEmployees()
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const activeEmployeeNames = employees.filter(e => e.is_active).map(e => e.name)
+
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'pending', label: t.pages.admin.tabs.pending, count: pendingRequests.length },
     { key: 'approved', label: t.pages.admin.tabs.approved },
     { key: 'cancellations', label: t.pages.admin.tabs.cancellations, count: cancelRequests.length },
+    { key: 'employees', label: t.pages.admin.tabs.employees },
   ]
 
   if (loading) return <LoadingState message="טוען דשבורד..." />
@@ -194,7 +244,16 @@ export default function AdminPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="label">{t.form.name}</label>
-                        <input className="input" value={editName} onChange={e => setEditName(e.target.value)} />
+                        <select className="input" value={editName} onChange={e => setEditName(e.target.value)}>
+                          <option value="">בחר עובד</option>
+                          {activeEmployeeNames.map(n => (
+                            <option key={n} value={n}>{n}</option>
+                          ))}
+                          {/* Keep current name selectable even if not in active list */}
+                          {editName && !activeEmployeeNames.includes(editName) && (
+                            <option value={editName}>{editName}</option>
+                          )}
+                        </select>
                       </div>
                       <div>
                         <label className="label">{t.form.date}</label>
@@ -209,7 +268,7 @@ export default function AdminPage() {
                               ? type === 'morning' ? 'border-amber-400 bg-amber-50 text-amber-800' : 'border-indigo-400 bg-indigo-50 text-indigo-800'
                               : 'border-ink-200 text-ink-600 bg-white'
                           }`}>
-                          {type === 'morning' ? 'בוקר' : 'ערב'}
+                          {type === 'morning' ? t.shiftType.morning : t.shiftType.evening}
                         </button>
                       ))}
                     </div>
@@ -373,6 +432,63 @@ export default function AdminPage() {
               </div>
             ))
           }
+        </div>
+      )}
+
+      {/* Employees */}
+      {tab === 'employees' && (
+        <div className="flex flex-col gap-4">
+          <div className="card p-4">
+            <p className="text-sm font-medium text-ink-700 mb-3">{t.pages.admin.employees.title}</p>
+            <div className="flex gap-2">
+              <input
+                className="input flex-1"
+                type="text"
+                placeholder={t.pages.admin.employees.addPlaceholder}
+                value={newEmployeeName}
+                onChange={e => setNewEmployeeName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEmployee() } }}
+              />
+              <button
+                onClick={addEmployee}
+                disabled={actionLoading === 'add-employee' || !newEmployeeName.trim()}
+                className="btn-success shrink-0"
+              >
+                {actionLoading === 'add-employee' ? <Spinner size="sm" /> : t.pages.admin.employees.add}
+              </button>
+            </div>
+          </div>
+
+          {employees.length === 0 ? (
+            <EmptyState title={t.pages.admin.employees.empty} />
+          ) : (
+            employees.map(emp => (
+              <div key={emp.id} className={`card p-4 flex items-center justify-between gap-4 ${!emp.is_active ? 'opacity-50' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-ink-900">{emp.name}</span>
+                  <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${
+                    emp.is_active
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-ink-100 text-ink-500'
+                  }`}>
+                    {emp.is_active ? t.pages.admin.employees.active : t.pages.admin.employees.inactive}
+                  </span>
+                </div>
+                <button
+                  onClick={() => toggleEmployee(emp)}
+                  disabled={actionLoading === `toggle-emp-${emp.id}`}
+                  className="btn-secondary text-sm px-3 py-2 shrink-0"
+                >
+                  {actionLoading === `toggle-emp-${emp.id}`
+                    ? <Spinner size="sm" />
+                    : emp.is_active
+                      ? t.pages.admin.employees.deactivate
+                      : t.pages.admin.employees.activate
+                  }
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>

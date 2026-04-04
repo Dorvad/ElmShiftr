@@ -19,7 +19,12 @@ export function formatDateTime(isoStr: string): string {
 }
 
 export function todayString(): string {
-  return new Date().toISOString().split('T')[0]
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
 }
 
 export function groupByDate<T extends { date: string }>(items: T[]): Record<string, T[]> {

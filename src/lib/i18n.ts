@@ -79,11 +79,6 @@ export const t = {
     },
     admin: {
       title: 'דשבורד ניהול',
-      tabs: {
-        pending: 'בקשות ממתינות',
-        approved: 'לוח מאושר',
-        cancellations: 'בקשות ביטול',
-      },
       pendingEmpty: 'אין בקשות ממתינות',
       approvedEmpty: 'אין משמרות מאושרות',
       cancellationsEmpty: 'אין בקשות ביטול ממתינות',
@@ -105,6 +100,24 @@ export const t = {
       deleteCanceledShifts: 'מחק משמרות מבוטלות',
       deleteCanceledShiftsConfirm: 'למחוק את כל המשמרות המבוטלות?',
       deleteShift: 'מחק',
+      tabs: {
+        pending: 'בקשות ממתינות',
+        approved: 'לוח מאושר',
+        cancellations: 'בקשות ביטול',
+        employees: 'עובדים',
+      },
+      employees: {
+        title: 'ניהול עובדים',
+        empty: 'אין עובדים במערכת',
+        addPlaceholder: 'שם העובד החדש',
+        add: 'הוסף עובד',
+        adding: 'מוסיף...',
+        activate: 'הפעל',
+        deactivate: 'השבת',
+        active: 'פעיל',
+        inactive: 'לא פעיל',
+        duplicateError: 'עובד עם שם זה כבר קיים',
+      },
     },
   },
 
