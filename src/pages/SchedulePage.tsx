@@ -7,8 +7,15 @@ import { LoadingState, EmptyState, ShiftBadge } from '../components/ui'
 type ViewMode = 'list' | 'calendar'
 type ShiftFilter = 'all' | ShiftType
 
+const ISRAEL_TZ = 'Asia/Jerusalem'
+
 function toDateKey(date: Date) {
-  return date.toISOString().split('T')[0]
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: ISRAEL_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
 }
 
 export default function SchedulePage() {
@@ -20,8 +27,10 @@ export default function SchedulePage() {
   const [selectedShiftType, setSelectedShiftType] = useState<ShiftFilter>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [calendarMonth, setCalendarMonth] = useState(() => {
-    const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
-    return new Date(now.getFullYear(), now.getMonth(), 1)
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit' }).formatToParts(new Date())
+    const year = Number(parts.find(p => p.type === 'year')!.value)
+    const month = Number(parts.find(p => p.type === 'month')!.value) - 1
+    return new Date(year, month, 1)
   })
 
   const fetchShifts = useCallback(async () => {
@@ -65,10 +74,7 @@ export default function SchedulePage() {
   const grouped = groupByDate(filteredShifts)
   const sortedDates = Object.keys(grouped).sort()
 
-  const today = new Date(
-    new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })
-  )
-  const todayStr = toDateKey(today)
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: ISRAEL_TZ }).format(new Date())
 
   const toggle = (date: string) => {
     setExpanded(prev => {

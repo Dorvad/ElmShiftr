@@ -115,21 +115,23 @@ export default function AdminPage() {
     await supabase.from('cancel_requests').update({ status: 'rejected' }).eq('id', id)
   })
 
-  const resetBoard = () => act('reset-board', async () => {
+  const resetBoard = () => {
     if (!window.confirm(t.pages.admin.resetBoardConfirm)) return
+    act('reset-board', async () => {
+      await Promise.all([
+        supabase.from('approved_shifts').delete().not('id', 'is', null),
+        supabase.from('shift_requests').delete().not('id', 'is', null),
+        supabase.from('cancel_requests').delete().not('id', 'is', null),
+      ])
+    })
+  }
 
-    await Promise.all([
-      supabase.from('approved_shifts').delete().not('id', 'is', null),
-      supabase.from('shift_requests').delete().not('id', 'is', null),
-      supabase.from('cancel_requests').delete().not('id', 'is', null),
-    ])
-  })
-
-  const deleteCanceledShifts = () => act('delete-canceled-shifts', async () => {
+  const deleteCanceledShifts = () => {
     if (!window.confirm(t.pages.admin.deleteCanceledShiftsConfirm)) return
-
-    await supabase.from('approved_shifts').delete().eq('status', 'canceled')
-  })
+    act('delete-canceled-shifts', async () => {
+      await supabase.from('approved_shifts').delete().eq('status', 'canceled')
+    })
+  }
 
   const deleteShift = (shift: ApprovedShift) => act(`delete-shift-${shift.id}`, async () => {
     await supabase.from('approved_shifts').delete().eq('id', shift.id)
@@ -277,7 +279,7 @@ export default function AdminPage() {
                       <textarea className="input resize-none" rows={2} value={editNotes} onChange={e => setEditNotes(e.target.value)} />
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => approveWithEdit(req)} disabled={actionLoading === req.id} className="btn-success flex-1">
+                      <button onClick={() => approveWithEdit(req)} disabled={actionLoading !== null} className="btn-success flex-1">
                         {actionLoading === req.id ? <Spinner size="sm" /> : t.pages.admin.approve}
                       </button>
                       <button onClick={() => setEditingId(null)} className="btn-secondary">
@@ -299,7 +301,7 @@ export default function AdminPage() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => savePendingNotes(req)}
-                              disabled={actionLoading === `pending-notes-${req.id}`}
+                              disabled={actionLoading !== null}
                               className="btn-success text-sm px-3 py-2"
                             >
                               {actionLoading === `pending-notes-${req.id}` ? <Spinner size="sm" /> : t.pages.admin.save}
@@ -319,10 +321,10 @@ export default function AdminPage() {
                     </div>
                     <div className="flex gap-2 shrink-0 flex-wrap">
                       <button onClick={() => startEdit(req)} className="btn-secondary text-sm px-4 py-2">{t.pages.admin.edit}</button>
-                      <button onClick={() => approveRequest(req)} disabled={actionLoading === req.id} className="btn-success">
+                      <button onClick={() => approveRequest(req)} disabled={actionLoading !== null} className="btn-success">
                         {actionLoading === req.id ? <Spinner size="sm" /> : t.pages.admin.approve}
                       </button>
-                      <button onClick={() => rejectRequest(req.id)} disabled={actionLoading === req.id} className="btn-danger">
+                      <button onClick={() => rejectRequest(req.id)} disabled={actionLoading !== null} className="btn-danger">
                         {actionLoading === req.id ? <Spinner size="sm" /> : t.pages.admin.reject}
                       </button>
                     </div>
@@ -341,10 +343,10 @@ export default function AdminPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-sm text-ink-600">{t.pages.admin.resetBoardHint}</p>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <button onClick={deleteCanceledShifts} disabled={actionLoading === 'delete-canceled-shifts'} className="btn-secondary w-full sm:w-auto">
+                <button onClick={deleteCanceledShifts} disabled={actionLoading !== null} className="btn-secondary w-full sm:w-auto">
                   {actionLoading === 'delete-canceled-shifts' ? <Spinner size="sm" /> : t.pages.admin.deleteCanceledShifts}
                 </button>
-                <button onClick={resetBoard} disabled={actionLoading === 'reset-board'} className="btn-danger w-full sm:w-auto">
+                <button onClick={resetBoard} disabled={actionLoading !== null} className="btn-danger w-full sm:w-auto">
                   {actionLoading === 'reset-board' ? <Spinner size="sm" /> : t.pages.admin.resetBoard}
                 </button>
               </div>
@@ -367,7 +369,7 @@ export default function AdminPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => saveApprovedNotes(shift)}
-                          disabled={actionLoading === `approved-notes-${shift.id}`}
+                          disabled={actionLoading !== null}
                           className="btn-success text-sm px-3 py-2"
                         >
                           {actionLoading === `approved-notes-${shift.id}` ? <Spinner size="sm" /> : t.pages.admin.save}
@@ -386,15 +388,15 @@ export default function AdminPage() {
                 </div>
                 <div className="shrink-0 flex gap-2">
                   {shift.status === 'approved' ? (
-                    <button onClick={() => cancelShift(shift)} disabled={actionLoading === shift.id} className="btn-danger">
+                    <button onClick={() => cancelShift(shift)} disabled={actionLoading !== null} className="btn-danger">
                       {actionLoading === shift.id ? <Spinner size="sm" /> : t.pages.admin.cancel}
                     </button>
                   ) : (
-                    <button onClick={() => restoreShift(shift)} disabled={actionLoading === shift.id} className="btn-secondary text-sm px-3 py-2">
+                    <button onClick={() => restoreShift(shift)} disabled={actionLoading !== null} className="btn-secondary text-sm px-3 py-2">
                       {actionLoading === shift.id ? <Spinner size="sm" /> : t.pages.admin.restore}
                     </button>
                   )}
-                  <button onClick={() => deleteShift(shift)} disabled={actionLoading === `delete-shift-${shift.id}`} className="btn-secondary text-sm px-3 py-2">
+                  <button onClick={() => deleteShift(shift)} disabled={actionLoading !== null} className="btn-secondary text-sm px-3 py-2">
                     {actionLoading === `delete-shift-${shift.id}` ? <Spinner size="sm" /> : t.pages.admin.deleteShift}
                   </button>
                 </div>
@@ -421,10 +423,10 @@ export default function AdminPage() {
                     <span className="text-xs font-mono text-ink-400">התקבל: {formatDateTime(req.created_at)}</span>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => approveCancelReq(req)} disabled={actionLoading === req.id} className="btn-success">
+                    <button onClick={() => approveCancelReq(req)} disabled={actionLoading !== null} className="btn-success">
                       {actionLoading === req.id ? <Spinner size="sm" /> : t.pages.admin.approveCancel}
                     </button>
-                    <button onClick={() => rejectCancelReq(req.id)} disabled={actionLoading === req.id} className="btn-danger">
+                    <button onClick={() => rejectCancelReq(req.id)} disabled={actionLoading !== null} className="btn-danger">
                       {actionLoading === req.id ? <Spinner size="sm" /> : t.pages.admin.rejectCancel}
                     </button>
                   </div>
@@ -451,7 +453,7 @@ export default function AdminPage() {
               />
               <button
                 onClick={addEmployee}
-                disabled={actionLoading === 'add-employee' || !newEmployeeName.trim()}
+                disabled={actionLoading !== null || !newEmployeeName.trim()}
                 className="btn-success shrink-0"
               >
                 {actionLoading === 'add-employee' ? <Spinner size="sm" /> : t.pages.admin.employees.add}
@@ -476,7 +478,7 @@ export default function AdminPage() {
                 </div>
                 <button
                   onClick={() => toggleEmployee(emp)}
-                  disabled={actionLoading === `toggle-emp-${emp.id}`}
+                  disabled={actionLoading !== null}
                   className="btn-secondary text-sm px-3 py-2 shrink-0"
                 >
                   {actionLoading === `toggle-emp-${emp.id}`
