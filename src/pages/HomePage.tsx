@@ -69,7 +69,7 @@ export default function HomePage() {
       <section className="max-w-3xl mx-auto mt-8">
         <div className="card p-5 sm:p-6">
           <div className="mb-5">
-            <p className="text-sm font-semibold text-ink-800">בדיקה ידנית של המשחקים שהוזמנו להיום</p>
+            <p className="text-sm font-semibold text-ink-800">בדיקת משחקים שהוזמנו</p>
             <p className="text-xs text-ink-500 mt-1">
               בדקו ישירות בכל אתר כדי לראות אילו שעות כבר נתפסו.
             </p>
