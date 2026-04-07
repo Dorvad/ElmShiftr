@@ -8,26 +8,33 @@ export function useEmployees() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from('employees')
-      .select('id, name, sort_order')
-      .eq('is_active', true)
-      .order('sort_order')
-      .then(({ data }) => {
-        if (data) {
-          const existingNames = new Set(data.map(employee => employee.name))
-          const fallbackEmployees = REQUIRED_EMPLOYEES
-            .filter(name => !existingNames.has(name))
-            .map((name, idx) => ({
-              id: `fallback-${name}`,
-              name,
-              sort_order: data.length + idx + 1,
-            }))
+    const fetchEmployees = async () => {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, name, sort_order')
+        .eq('is_active', true)
+        .order('sort_order')
 
-          setEmployees([...(data as Employee[]), ...(fallbackEmployees as Employee[])])
-        }
-        setLoading(false)
-      })
+      const safeData = (data ?? []) as Employee[]
+      const existingNames = new Set(safeData.map(employee => employee.name))
+      const fallbackEmployees = REQUIRED_EMPLOYEES
+        .filter(name => !existingNames.has(name))
+        .map((name, idx) => ({
+          id: `fallback-${name}`,
+          name,
+          sort_order: safeData.length + idx + 1,
+        }))
+
+      setEmployees([...(safeData as Employee[]), ...(fallbackEmployees as Employee[])])
+
+      if (error) {
+        console.error('Failed to load employees from Supabase. Falling back to required list.', error)
+      }
+
+      setLoading(false)
+    }
+
+    fetchEmployees()
   }, [])
 
   return { employees, loading }
