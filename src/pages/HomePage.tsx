@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { t } from '../lib/i18n'
+import butcheryImg from '../assets/butchery_button.png'
+import elmImg from '../assets/elm_button.png'
 
 const cards = [
   {
@@ -27,11 +29,13 @@ const manualVenueLinks = [
     venueKey: 'butchery',
     venueName: 'הקצביה',
     sourceUrl: 'https://www.escaperoom.co.il/tel-aviv-the-butchery',
+    image: butcheryImg,
   },
   {
     venueKey: 'elm_street',
     venueName: 'אלם סטריט',
     sourceUrl: 'https://www.escaperoom.co.il/tel-Aviv-elm-street',
+    image: elmImg,
   },
 ]
 
@@ -75,17 +79,27 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {manualVenueLinks.map((venue) => (
               <a
                 key={venue.venueKey}
                 href={venue.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-xl border border-ink-100 bg-parchment/60 p-4 hover:bg-parchment transition-colors"
+                className="venue-btn"
               >
-                <p className="font-semibold text-ink-900">{venue.venueName}</p>
-                <p className="text-xs text-ink-500 mt-1">מעבר לעמוד ההזמנות</p>
+                <img
+                  src={venue.image}
+                  alt={venue.venueName}
+                  className="venue-btn__img"
+                />
+                <div className="venue-btn__overlay">
+                  <p className="venue-btn__name">{venue.venueName}</p>
+                  <p className="venue-btn__hint">
+                    מעבר לעמוד ההזמנות
+                    <span className="venue-btn__arrow">←</span>
+                  </p>
+                </div>
               </a>
             ))}
           </div>
