@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { t } from '../lib/i18n'
 import butcheryImg from '../assets/butchery_button.png'
 import elmImg from '../assets/elm_button.png'
-import wrongTurnImg from '../assets/wrongturn_button.png'
 
 const cards = [
   {
@@ -37,12 +36,6 @@ const manualVenueLinks = [
     venueName: 'אלם סטריט',
     sourceUrl: 'https://www.escaperoom.co.il/tel-Aviv-elm-street',
     image: elmImg,
-  },
-  {
-    venueKey: 'wrong_turn',
-    venueName: 'טעות בכיוון',
-    sourceUrl: 'https://www.escaperoom.co.il/tel-aviv-wrong-turn',
-    image: wrongTurnImg,
   },
 ]
 
@@ -86,7 +79,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {manualVenueLinks.map((venue) => (
               <a
                 key={venue.venueKey}
