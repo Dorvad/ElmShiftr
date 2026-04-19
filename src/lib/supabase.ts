@@ -52,3 +52,13 @@ export interface Employee {
   sort_order: number
   created_at: string
 }
+
+export type MessageType = 'info' | 'important'
+
+export interface Message {
+  id: string
+  author: string
+  content: string
+  message_type: MessageType
+  created_at: string
+}

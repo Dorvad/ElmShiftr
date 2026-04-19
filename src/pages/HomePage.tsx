@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase, type ShiftType } from '../lib/supabase'
 import { todayString } from '../lib/dateHelpers'
 import { ShiftBadge, Spinner, EmployeeAvatar, EmployeeLightbox } from '../components/ui'
+import MessageBoard from '../components/MessageBoard'
 import butcheryImg  from '../assets/butchery_button.png'
 import elmImg       from '../assets/elm_button.png'
 import wrongTurnImg from '../assets/wrongturn_button.png'
@@ -166,6 +167,11 @@ export default function HomePage() {
             <span className="text-xs font-mono text-ink-400 group-hover:text-ink-600 group-hover:-translate-x-1 transition-all inline-block">←</span>
           </Link>
         </div>
+      </section>
+
+      {/* ── Message board ───────────────────────────────────────── */}
+      <section className="max-w-3xl mx-auto mb-4">
+        <MessageBoard />
       </section>
 
       {/* ── Action CTAs ─────────────────────────────────────────── */}
