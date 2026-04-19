@@ -157,15 +157,15 @@ export default function HomePage() {
             </div>
           )}
 
-          <Link
-            to="/schedule"
-            className="flex items-center justify-between px-5 py-4 border-t border-ink-100 bg-ink-50/50 hover:bg-ink-100/60 transition-colors group"
-          >
-            <span className="text-sm font-medium text-ink-700 group-hover:text-ink-900 transition-colors">
-              צפה בלוח המשמרות המלא
-            </span>
-            <span className="text-xs font-mono text-ink-400 group-hover:text-ink-600 group-hover:-translate-x-1 transition-all inline-block">←</span>
-          </Link>
+          <div className="px-5 py-4 border-t border-ink-100 bg-ink-50/30">
+            <Link
+              to="/schedule"
+              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-ink-900 hover:bg-ink-700 active:scale-[0.98] text-bone text-sm font-semibold transition-all duration-150 group"
+            >
+              <span>צפה בלוח המשמרות המלא</span>
+              <span className="font-mono text-bone/70 group-hover:-translate-x-1 transition-transform inline-block">←</span>
+            </Link>
+          </div>
         </div>
       </section>
 
