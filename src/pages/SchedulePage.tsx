@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { supabase, type ApprovedShift, type ShiftType } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { formatDateHebrew, groupByDate } from '../lib/dateHelpers'
-import { LoadingState, EmptyState, ShiftBadge } from '../components/ui'
+import { LoadingState, EmptyState, ShiftBadge, EmployeeAvatar, EmployeeLightbox } from '../components/ui'
 
-type ViewMode = 'list' | 'calendar'
+type ViewMode   = 'list' | 'calendar'
 type ShiftFilter = 'all' | ShiftType
 
 function toDateKey(date: Date) {
@@ -12,13 +12,14 @@ function toDateKey(date: Date) {
 }
 
 export default function SchedulePage() {
-  const [shifts, setShifts] = useState<ApprovedShift[]>([])
-  const [loading, setLoading] = useState(true)
+  const [shifts, setShifts]           = useState<ApprovedShift[]>([])
+  const [loading, setLoading]         = useState(true)
   const [lastUpdated, setLastUpdated] = useState(new Date())
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [selectedName, setSelectedName] = useState('all')
+  const [expanded, setExpanded]       = useState<Set<string>>(new Set())
+  const [selectedName, setSelectedName]           = useState('all')
   const [selectedShiftType, setSelectedShiftType] = useState<ShiftFilter>('all')
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [viewMode, setViewMode]       = useState<ViewMode>('list')
+  const [lightboxName, setLightboxName] = useState<string | null>(null)
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -29,7 +30,7 @@ export default function SchedulePage() {
       .from('approved_shifts')
       .select('*')
       .eq('status', 'approved')
-      .order('date', { ascending: true })
+      .order('date',       { ascending: true })
       .order('shift_type', { ascending: true })
     if (!error && data) {
       setShifts(data as ApprovedShift[])
@@ -49,25 +50,23 @@ export default function SchedulePage() {
   }, [fetchShifts])
 
   const uniqueNames = useMemo(
-    () => Array.from(new Set(shifts.map(shift => shift.name))).sort((a, b) => a.localeCompare(b, 'he')),
+    () => Array.from(new Set(shifts.map(s => s.name))).sort((a, b) => a.localeCompare(b, 'he')),
     [shifts],
   )
 
   const filteredShifts = useMemo(
-    () => shifts.filter(shift => {
-      const matchesName = selectedName === 'all' || shift.name === selectedName
-      const matchesType = selectedShiftType === 'all' || shift.shift_type === selectedShiftType
+    () => shifts.filter(s => {
+      const matchesName = selectedName      === 'all' || s.name       === selectedName
+      const matchesType = selectedShiftType === 'all' || s.shift_type === selectedShiftType
       return matchesName && matchesType
     }),
     [shifts, selectedName, selectedShiftType],
   )
 
-  const grouped = groupByDate(filteredShifts)
-  const sortedDates = Object.keys(grouped).sort()
+  const grouped      = groupByDate(filteredShifts)
+  const sortedDates  = Object.keys(grouped).sort()
 
-  const today = new Date(
-    new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })
-  )
+  const today    = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
   const todayStr = toDateKey(today)
 
   const toggle = (date: string) => {
@@ -81,13 +80,13 @@ export default function SchedulePage() {
   const monthLabel = calendarMonth.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
 
   const calendarCells = useMemo(() => {
-    const firstDay = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1)
+    const firstDay     = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1)
     const startWeekDay = firstDay.getDay()
-    const gridStart = new Date(firstDay)
+    const gridStart    = new Date(firstDay)
     gridStart.setDate(firstDay.getDate() - startWeekDay)
 
     return Array.from({ length: 42 }, (_, idx) => {
-      const date = new Date(gridStart)
+      const date    = new Date(gridStart)
       date.setDate(gridStart.getDate() + idx)
       const dateKey = toDateKey(date)
       return {
@@ -99,18 +98,19 @@ export default function SchedulePage() {
     })
   }, [calendarMonth, grouped])
 
-  const goPrevMonth = () => {
-    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
-  }
-
-  const goNextMonth = () => {
-    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
-  }
+  const goPrevMonth = () => setCalendarMonth(p => new Date(p.getFullYear(), p.getMonth() - 1, 1))
+  const goNextMonth = () => setCalendarMonth(p => new Date(p.getFullYear(), p.getMonth() + 1, 1))
 
   if (loading) return <LoadingState message="טוען לוח משמרות..." />
 
   return (
     <div className="animate-fade-in">
+      {/* Lightbox — portal-rendered, shown when a portrait is tapped */}
+      {lightboxName && (
+        <EmployeeLightbox name={lightboxName} onClose={() => setLightboxName(null)} />
+      )}
+
+      {/* Page header */}
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
           <h1 className="page-header mb-1">{t.pages.schedule.title}</h1>
@@ -121,7 +121,8 @@ export default function SchedulePage() {
         </span>
       </div>
 
-      <div className="card p-4 mb-4 flex flex-col gap-3">
+      {/* Filters */}
+      <div className="card p-4 mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label className="label text-xs">סינון לפי שם</label>
@@ -132,11 +133,7 @@ export default function SchedulePage() {
           </div>
           <div>
             <label className="label text-xs">סינון לפי משמרת</label>
-            <select
-              className="input"
-              value={selectedShiftType}
-              onChange={e => setSelectedShiftType(e.target.value as ShiftFilter)}
-            >
+            <select className="input" value={selectedShiftType} onChange={e => setSelectedShiftType(e.target.value as ShiftFilter)}>
               <option value="all">בוקר + ערב</option>
               <option value="morning">בוקר</option>
               <option value="evening">ערב</option>
@@ -145,24 +142,20 @@ export default function SchedulePage() {
           <div>
             <label className="label text-xs">תצוגה</label>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                  viewMode === 'list' ? 'border-ink-700 bg-ink-50 text-ink-900' : 'border-ink-200 text-ink-600 bg-white'
-                }`}
-              >
-                רשימה
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('calendar')}
-                className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                  viewMode === 'calendar' ? 'border-ink-700 bg-ink-50 text-ink-900' : 'border-ink-200 text-ink-600 bg-white'
-                }`}
-              >
-                לוח שנה
-              </button>
+              {(['list', 'calendar'] as ViewMode[]).map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setViewMode(mode)}
+                  className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                    viewMode === mode
+                      ? 'border-ink-700 bg-ink-50 text-ink-900'
+                      : 'border-ink-200 text-ink-600 bg-white'
+                  }`}
+                >
+                  {mode === 'list' ? 'רשימה' : 'לוח שנה'}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -172,33 +165,29 @@ export default function SchedulePage() {
         <EmptyState title={t.pages.schedule.empty} description={t.pages.schedule.emptyDesc} />
       ) : viewMode === 'list' ? (
         <>
-          {/* Desktop table */}
+          {/* ── Desktop table ─────────────────────────────────────────── */}
           <div className="hidden md:block card overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="bg-parchment border-b border-ink-100">
-                  <th className="text-right px-5 py-3 text-xs font-mono text-ink-500 uppercase tracking-wider">תאריך</th>
-                  <th className="text-right px-5 py-3 text-xs font-mono text-ink-500 uppercase tracking-wider">שם</th>
-                  <th className="text-right px-5 py-3 text-xs font-mono text-ink-500 uppercase tracking-wider">משמרת</th>
-                  <th className="text-right px-5 py-3 text-xs font-mono text-ink-500 uppercase tracking-wider">הערות</th>
+                  {['תאריך', 'עובד', 'משמרת', 'הערות'].map(h => (
+                    <th key={h} className="text-right px-5 py-3 text-xs font-mono text-ink-500 uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {sortedDates.map(date => {
                   const isToday = date === todayStr
-
                   return grouped[date].map((shift, idx) => (
                     <tr key={shift.id} className="border-b border-ink-50 hover:bg-parchment/40 transition-colors">
                       {idx === 0 && (
                         <td
-                          className={`px-5 py-3.5 font-display font-semibold text-sm align-top ${
-                            isToday
-                              ? 'bg-yellow-100 text-yellow-900 ring-1 ring-yellow-300'
-                              : 'text-ink-700'
+                          className={`px-5 py-4 font-display font-semibold text-sm align-middle ${
+                            isToday ? 'bg-yellow-50 text-yellow-900' : 'text-ink-700'
                           }`}
                           rowSpan={grouped[date].length}
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span>{formatDateHebrew(date)}</span>
                             {isToday && (
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-900">
@@ -208,9 +197,24 @@ export default function SchedulePage() {
                           </div>
                         </td>
                       )}
-                      <td className="px-5 py-3.5 font-medium text-ink-900">{shift.name}</td>
-                      <td className="px-5 py-3.5"><ShiftBadge type={shift.shift_type as ShiftType} /></td>
-                      <td className="px-5 py-3.5 text-sm text-ink-400">{shift.notes || '—'}</td>
+
+                      {/* Employee cell — avatar + name */}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <EmployeeAvatar
+                            name={shift.name}
+                            shiftType={shift.shift_type as ShiftType}
+                            size="sm"
+                            onClick={() => setLightboxName(shift.name)}
+                          />
+                          <span className="font-medium text-ink-900">{shift.name}</span>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-3">
+                        <ShiftBadge type={shift.shift_type as ShiftType} />
+                      </td>
+                      <td className="px-5 py-3 text-sm text-ink-400">{shift.notes || '—'}</td>
                     </tr>
                   ))
                 })}
@@ -218,45 +222,53 @@ export default function SchedulePage() {
             </table>
           </div>
 
-          {/* Mobile accordion */}
+          {/* ── Mobile accordion ──────────────────────────────────────── */}
           <div className="md:hidden flex flex-col gap-3">
             {sortedDates.map(date => {
-              const isOpen = expanded.has(date)
+              const isOpen  = expanded.has(date)
               const isToday = date === todayStr
 
               return (
                 <div
                   key={date}
-                  className={`card overflow-hidden ${
-                    isToday ? 'ring-1 ring-yellow-300 bg-yellow-50/40' : ''
-                  }`}
+                  className={`card overflow-hidden ${isToday ? 'ring-1 ring-yellow-300 bg-yellow-50/40' : ''}`}
                 >
                   <button
                     onClick={() => toggle(date)}
                     className="w-full flex items-center justify-between px-4 py-4 hover:bg-parchment/40 transition-colors text-right"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-display font-semibold text-ink-800 text-sm">
-                          {formatDateHebrew(date)}
+                      <span className="font-display font-semibold text-ink-800 text-sm">
+                        {formatDateHebrew(date)}
+                      </span>
+                      {isToday && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-900">
+                          היום
                         </span>
-                        {isToday && (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-900">
-                            היום
-                          </span>
-                        )}
-                      </div>
+                      )}
                       <span className="text-xs font-mono text-ink-400">{grouped[date].length} משמרות</span>
                     </div>
                     <span className={`text-ink-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▾</span>
                   </button>
+
                   {isOpen && (
                     <div className="border-t border-ink-100 divide-y divide-ink-50">
                       {grouped[date].map(shift => (
-                        <div key={shift.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-ink-900">{shift.name}</p>
-                            {shift.notes && <p className="text-sm text-ink-400 mt-0.5">{shift.notes}</p>}
+                        <div key={shift.id} className="px-4 py-3.5 flex items-center justify-between gap-3">
+                          {/* Avatar + name + notes */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <EmployeeAvatar
+                              name={shift.name}
+                              shiftType={shift.shift_type as ShiftType}
+                              size="sm"
+                              onClick={() => setLightboxName(shift.name)}
+                            />
+                            <div className="min-w-0">
+                              <p className="font-medium text-ink-900">{shift.name}</p>
+                              {shift.notes && (
+                                <p className="text-xs text-ink-400 mt-0.5 truncate">{shift.notes}</p>
+                              )}
+                            </div>
                           </div>
                           <ShiftBadge type={shift.shift_type as ShiftType} />
                         </div>
@@ -269,6 +281,7 @@ export default function SchedulePage() {
           </div>
         </>
       ) : (
+        /* ── Calendar view ──────────────────────────────────────────── */
         <div className="card p-4">
           <div className="flex items-center justify-between mb-4">
             <button type="button" className="btn-secondary text-sm px-3 py-2" onClick={goPrevMonth}>◀</button>
@@ -293,7 +306,11 @@ export default function SchedulePage() {
                   <div className="text-xs font-mono text-ink-500 mb-1">{cell.date.getDate()}</div>
                   <div className="flex flex-col gap-1">
                     {cell.shifts.slice(0, 3).map(shift => (
-                      <div key={shift.id} className="text-[11px] rounded px-1 py-0.5 bg-parchment border border-ink-100 truncate">
+                      <div key={shift.id} className={`text-[11px] rounded px-1 py-0.5 border truncate ${
+                        shift.shift_type === 'morning'
+                          ? 'bg-amber-50 border-amber-200 text-amber-800'
+                          : 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                      }`}>
                         {shift.name} · {shift.shift_type === 'morning' ? 'בוקר' : 'ערב'}
                       </div>
                     ))}
