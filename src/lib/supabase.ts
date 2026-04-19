@@ -53,7 +53,7 @@ export interface Employee {
   created_at: string
 }
 
-export type MessageType = 'info' | 'important'
+export type MessageType = 'info' | 'important' | 'admin'
 
 export interface Message {
   id: string
