@@ -105,6 +105,7 @@ export const t = {
         approved: 'לוח מאושר',
         cancellations: 'בקשות ביטול',
         employees: 'עובדים',
+        bookings: 'משחקים שהוזמנו',
       },
       employees: {
         title: 'ניהול עובדים',
