@@ -4,8 +4,9 @@ import { supabase, type ShiftRequest, type ApprovedShift, type CancelRequest, ty
 import { t } from '../lib/i18n'
 import { formatDateHebrew, formatDateTime } from '../lib/dateHelpers'
 import { ShiftBadge, StatusBadge, LoadingState, EmptyState, Alert, Spinner } from '../components/ui'
+import { BookingEditor } from '../components/BookingEditor'
 
-type Tab = 'pending' | 'approved' | 'cancellations' | 'employees'
+type Tab = 'pending' | 'approved' | 'cancellations' | 'employees' | 'bookings'
 
 export default function AdminPage() {
   const navigate = useNavigate()
@@ -205,6 +206,7 @@ export default function AdminPage() {
     { key: 'approved', label: t.pages.admin.tabs.approved },
     { key: 'cancellations', label: t.pages.admin.tabs.cancellations, count: cancelRequests.length },
     { key: 'employees', label: t.pages.admin.tabs.employees },
+    { key: 'bookings', label: t.pages.admin.tabs.bookings },
   ]
 
   if (loading) return <LoadingState message="טוען דשבורד..." />
@@ -489,6 +491,16 @@ export default function AdminPage() {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {tab === 'bookings' && (
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-ink-900">עדכון משחקים שהוזמנו</h2>
+            <p className="text-sm text-ink-500 mt-1">בחר תאריך וסמן את שעות המשחק שהוזמנו בפועל.</p>
+          </div>
+          <BookingEditor />
         </div>
       )}
     </div>

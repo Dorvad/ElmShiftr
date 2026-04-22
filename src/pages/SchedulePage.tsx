@@ -3,6 +3,8 @@ import { supabase, type ApprovedShift, type ShiftType } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { formatDateHebrew, groupByDate } from '../lib/dateHelpers'
 import { LoadingState, EmptyState, ShiftBadge, EmployeeAvatar, EmployeeLightbox } from '../components/ui'
+import { BookedGamesPanel } from '../components/BookedGamesPanel'
+import { getBookingsForDate } from '../lib/gameBookings'
 
 type ViewMode   = 'list' | 'calendar'
 type ShiftFilter = 'all' | ShiftType
@@ -170,7 +172,7 @@ export default function SchedulePage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-parchment border-b border-ink-100">
-                  {['תאריך', 'עובד', 'משמרת', 'הערות'].map(h => (
+                  {['תאריך', 'משחקים שהוזמנו', 'עובד', 'משמרת', 'הערות'].map(h => (
                     <th key={h} className="text-right px-5 py-3 text-xs font-mono text-ink-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -178,9 +180,10 @@ export default function SchedulePage() {
               <tbody>
                 {sortedDates.map(date => {
                   const isToday = date === todayStr
+                  const dayBookings = getBookingsForDate(date)
                   return grouped[date].map((shift, idx) => (
-                    <tr key={shift.id} className="border-b border-ink-50 hover:bg-parchment/40 transition-colors">
-                      {idx === 0 && (
+                    <tr key={shift.id} className={`${idx === grouped[date].length - 1 ? 'border-b border-ink-100' : 'border-b border-ink-50'} hover:bg-parchment/40 transition-colors`}>
+                      {idx === 0 && (<>
                         <td
                           className={`px-5 py-4 font-display font-semibold text-sm align-middle ${
                             isToday ? 'bg-yellow-50 text-yellow-900' : 'text-ink-700'
@@ -196,7 +199,10 @@ export default function SchedulePage() {
                             )}
                           </div>
                         </td>
-                      )}
+                        <td rowSpan={grouped[date].length} className="px-3 py-3 align-top border-l border-ink-50 min-w-[260px]">
+                          <BookedGamesPanel bookings={dayBookings} />
+                        </td>
+                      </>)}
 
                       {/* Employee cell — avatar + name */}
                       <td className="px-5 py-3">
@@ -253,6 +259,9 @@ export default function SchedulePage() {
 
                   {isOpen && (
                     <div className="border-t border-ink-100 divide-y divide-ink-50">
+                      <div className="px-4 py-1">
+                        <BookedGamesPanel bookings={getBookingsForDate(date)} />
+                      </div>
                       {grouped[date].map(shift => (
                         <div key={shift.id} className="px-4 py-3.5 flex items-center justify-between gap-3">
                           {/* Avatar + name + notes */}
