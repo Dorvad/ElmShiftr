@@ -23,6 +23,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { to: '/schedule', label: t.nav.schedule },
     { to: '/request', label: t.nav.request },
     { to: '/cancel', label: t.nav.cancel },
+    { to: '/bookings', label: t.nav.bookings },
   ]
 
   return (

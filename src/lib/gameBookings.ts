@@ -1,3 +1,5 @@
+import { supabase } from './supabase'
+
 export type GameType = 'elmStreet' | 'butchery' | 'wrongTurn'
 
 export interface BookingsForDate {
@@ -7,10 +9,6 @@ export interface BookingsForDate {
 }
 
 export type BookingsByDate = Record<string, BookingsForDate>
-
-const STORAGE_KEY = 'elmshiftr.bookingsByDate.v1'
-const SLOT_INTERVAL_MINUTES = 90
-const SLOTS_PER_GAME = 11
 
 export const GAME_CONFIG: Record<GameType, { label: string; chipClass: string }> = {
   elmStreet: {
@@ -25,6 +23,16 @@ export const GAME_CONFIG: Record<GameType, { label: string; chipClass: string }>
     label: 'טעות בכיוון',
     chipClass: 'bg-sky-50 border-sky-200 text-sky-800',
   },
+}
+
+const SLOT_INTERVAL_MINUTES = 90
+const SLOTS_PER_GAME = 11
+
+interface GameBookingsRow {
+  date: string
+  elm_street_slots: string[]
+  butchery_slots: string[]
+  wrong_turn_slots: string[]
 }
 
 function pad2(value: number): string {
@@ -87,7 +95,7 @@ function sanitizeSlots(gameType: GameType, slots: string[] | undefined): string[
   return getGameSlots(gameType).filter(slot => unique.has(slot))
 }
 
-function normalizeBookingsForDate(value: unknown): BookingsForDate {
+export function normalizeBookingsForDate(value: unknown): BookingsForDate {
   const source = (value && typeof value === 'object') ? (value as Partial<BookingsForDate>) : {}
 
   return {
@@ -97,34 +105,74 @@ function normalizeBookingsForDate(value: unknown): BookingsForDate {
   }
 }
 
-export function getAllBookingsByDate(): BookingsByDate {
-  if (typeof window === 'undefined') return {}
+function fromRow(row: GameBookingsRow | null): BookingsForDate {
+  if (!row) return createEmptyBookingsForDate()
 
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return {}
+  return normalizeBookingsForDate({
+    elmStreet: row.elm_street_slots,
+    butchery: row.butchery_slots,
+    wrongTurn: row.wrong_turn_slots,
+  })
+}
 
-    const parsed = JSON.parse(raw) as Record<string, unknown>
+export async function getBookingsForDate(date: string): Promise<BookingsForDate> {
+  if (!date) return createEmptyBookingsForDate()
 
-    return Object.entries(parsed || {}).reduce<BookingsByDate>((acc, [date, data]) => {
-      acc[date] = normalizeBookingsForDate(data)
-      return acc
-    }, {})
-  } catch {
-    return {}
+  const { data, error } = await supabase
+    .from('game_bookings')
+    .select('date, elm_street_slots, butchery_slots, wrong_turn_slots')
+    .eq('date', date)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error('לא ניתן לטעון את המשחקים שהוזמנו כרגע.')
   }
+
+  return fromRow(data as GameBookingsRow | null)
 }
 
-export function getBookingsForDate(date: string): BookingsForDate {
-  const bookings = getAllBookingsByDate()
-  return bookings[date] ? normalizeBookingsForDate(bookings[date]) : createEmptyBookingsForDate()
+export async function getBookingsForDates(dates: string[]): Promise<BookingsByDate> {
+  const uniqueDates = Array.from(new Set(dates.filter(Boolean)))
+  if (uniqueDates.length === 0) return {}
+
+  const { data, error } = await supabase
+    .from('game_bookings')
+    .select('date, elm_street_slots, butchery_slots, wrong_turn_slots')
+    .in('date', uniqueDates)
+
+  if (error) {
+    throw new Error('לא ניתן לטעון את המשחקים שהוזמנו כרגע.')
+  }
+
+  const rows = (data ?? []) as GameBookingsRow[]
+  const byDate = rows.reduce<BookingsByDate>((acc, row) => {
+    acc[row.date] = fromRow(row)
+    return acc
+  }, {})
+
+  uniqueDates.forEach((date) => {
+    if (!byDate[date]) byDate[date] = createEmptyBookingsForDate()
+  })
+
+  return byDate
 }
 
-export function saveBookingsForDate(date: string, data: BookingsForDate): void {
-  if (!date || typeof window === 'undefined') return
+export async function saveBookingsForDate(date: string, data: BookingsForDate): Promise<void> {
+  if (!date) return
 
-  const bookings = getAllBookingsByDate()
-  bookings[date] = normalizeBookingsForDate(data)
+  const normalized = normalizeBookingsForDate(data)
+  const payload = {
+    date,
+    elm_street_slots: normalized.elmStreet,
+    butchery_slots: normalized.butchery,
+    wrong_turn_slots: normalized.wrongTurn,
+  }
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings))
+  const { error } = await supabase
+    .from('game_bookings')
+    .upsert(payload, { onConflict: 'date' })
+
+  if (error) {
+    throw new Error('שמירת המשחקים נכשלה. נסו שוב בעוד רגע.')
+  }
 }

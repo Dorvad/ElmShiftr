@@ -7,6 +7,7 @@ export const t = {
     schedule: 'לוח משמרות',
     request: 'בקשת משמרת',
     cancel: 'בקשת ביטול',
+    bookings: 'משחקים שהוזמנו',
     adminLogin: 'כניסת מנהל',
     adminDashboard: 'דשבורד',
     logout: 'יציאה',

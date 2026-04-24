@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { supabase, type ApprovedShift, type ShiftType } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { formatDateHebrew, groupByDate } from '../lib/dateHelpers'
 import { LoadingState, EmptyState, ShiftBadge, EmployeeAvatar, EmployeeLightbox } from '../components/ui'
 import { BookedGamesPanel } from '../components/BookedGamesPanel'
-import { getBookingsForDate } from '../lib/gameBookings'
+import { createEmptyBookingsForDate, getBookingsForDates, type BookingsByDate } from '../lib/gameBookings'
 
 type ViewMode   = 'list' | 'calendar'
 type ShiftFilter = 'all' | ShiftType
@@ -22,10 +22,25 @@ export default function SchedulePage() {
   const [selectedShiftType, setSelectedShiftType] = useState<ShiftFilter>('all')
   const [viewMode, setViewMode]       = useState<ViewMode>('list')
   const [lightboxName, setLightboxName] = useState<string | null>(null)
+  const [bookingsByDate, setBookingsByDate] = useState<BookingsByDate>({})
+  const sortedDatesRef = useRef<string[]>([])
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
+
+
+  const loadBookings = useCallback(async (dates: string[]) => {
+    try {
+      const data = await getBookingsForDates(dates)
+      setBookingsByDate(data)
+    } catch {
+      setBookingsByDate(dates.reduce<BookingsByDate>((acc, date) => {
+        acc[date] = createEmptyBookingsForDate()
+        return acc
+      }, {}))
+    }
+  }, [])
 
   const fetchShifts = useCallback(async () => {
     const { data, error } = await supabase
@@ -46,10 +61,11 @@ export default function SchedulePage() {
     const channel = supabase
       .channel('schedule_public')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'approved_shifts' }, fetchShifts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_bookings' }, () => { void loadBookings(sortedDatesRef.current) })
       .subscribe()
     const interval = setInterval(fetchShifts, 30000)
     return () => { supabase.removeChannel(channel); clearInterval(interval) }
-  }, [fetchShifts])
+  }, [fetchShifts, loadBookings])
 
   const uniqueNames = useMemo(
     () => Array.from(new Set(shifts.map(s => s.name))).sort((a, b) => a.localeCompare(b, 'he')),
@@ -67,6 +83,12 @@ export default function SchedulePage() {
 
   const grouped      = groupByDate(filteredShifts)
   const sortedDates  = Object.keys(grouped).sort()
+
+
+  useEffect(() => {
+    sortedDatesRef.current = sortedDates
+    void loadBookings(sortedDates)
+  }, [loadBookings, sortedDates])
 
   const today    = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
   const todayStr = toDateKey(today)
@@ -180,7 +202,7 @@ export default function SchedulePage() {
               <tbody>
                 {sortedDates.map(date => {
                   const isToday = date === todayStr
-                  const dayBookings = getBookingsForDate(date)
+                  const dayBookings = bookingsByDate[date] ?? createEmptyBookingsForDate()
                   return grouped[date].map((shift, idx) => (
                     <tr key={shift.id} className={`${idx === grouped[date].length - 1 ? 'border-b border-ink-100' : 'border-b border-ink-50'} hover:bg-parchment/40 transition-colors`}>
                       {idx === 0 && (<>
@@ -260,7 +282,7 @@ export default function SchedulePage() {
                   {isOpen && (
                     <div className="border-t border-ink-100 divide-y divide-ink-50">
                       <div className="px-4 py-1">
-                        <BookedGamesPanel bookings={getBookingsForDate(date)} />
+                        <BookedGamesPanel bookings={bookingsByDate[date] ?? createEmptyBookingsForDate()} />
                       </div>
                       {grouped[date].map(shift => (
                         <div key={shift.id} className="px-4 py-3.5 flex items-center justify-between gap-3">
