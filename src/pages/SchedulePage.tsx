@@ -159,8 +159,6 @@ export default function SchedulePage() {
   const [selectedShiftType, setSelectedShiftType] = useState<ShiftFilter>('all')
   const [viewMode,  setViewMode]  = useState<ViewMode>('list')
   const [lightboxName, setLightboxName] = useState<string | null>(null)
-  const [bookingsByDate, setBookingsByDate] = useState<BookingsByDate>({})
-  const sortedDatesRef = useRef<string[]>([])
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
     return new Date(now.getFullYear(), now.getMonth(), 1)
