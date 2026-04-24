@@ -1,53 +1,190 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
-import { supabase, type ApprovedShift, type ShiftType } from '../lib/supabase'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
+import { supabase, type ApprovedShift, type ShiftType, type ShiftGame } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { formatDateHebrew, groupByDate } from '../lib/dateHelpers'
-import { LoadingState, EmptyState, ShiftBadge, EmployeeAvatar, EmployeeLightbox } from '../components/ui'
+import { LoadingState, EmptyState, ShiftBadge, EmployeeAvatar, EmployeeLightbox, Spinner } from '../components/ui'
 
 type ViewMode   = 'list' | 'calendar'
 type ShiftFilter = 'all' | ShiftType
+
+type SlotData = {
+  date: string
+  shiftType: ShiftType
+  workers: ApprovedShift[]
+  games: ShiftGame[]
+}
 
 function toDateKey(date: Date) {
   return date.toISOString().split('T')[0]
 }
 
+// ── Games panel for a single shift slot ──────────────────────────────────────
+
+function ShiftGamesPanel({
+  slot,
+  onGameAdded,
+  onGameRemoved,
+}: {
+  slot: SlotData
+  onGameAdded: (game: ShiftGame) => void
+  onGameRemoved: (id: string) => void
+}) {
+  const [inputValue, setInputValue] = useState('')
+  const [adding,  setAdding]  = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error,   setError]   = useState<string | null>(null)
+  const inputRef    = useRef<HTMLInputElement>(null)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const isEvening  = slot.shiftType === 'evening'
+  const sortedGames = [...slot.games].sort(
+    (a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at),
+  )
+
+  const accentBg   = isEvening ? 'bg-indigo-50/30 border-indigo-100' : 'bg-amber-50/30 border-amber-100'
+  const chipCls    = isEvening ? 'bg-indigo-50 border-indigo-200 text-indigo-800' : 'bg-amber-50 border-amber-200 text-amber-800'
+  const btnCls     = isEvening ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'
+  const labelColor = isEvening ? 'text-indigo-400' : 'text-amber-500'
+
+  const addGame = async () => {
+    const name = inputValue.trim()
+    if (!name || adding) return
+    if (slot.games.some(g => g.game_name.toLowerCase() === name.toLowerCase())) {
+      setError('משחק זה כבר ברשימה')
+      return
+    }
+    setAdding(true)
+    setError(null)
+    const { data, error: err } = await supabase
+      .from('shift_games')
+      .insert({ shift_date: slot.date, shift_type: slot.shiftType, game_name: name, sort_order: slot.games.length })
+      .select()
+      .single()
+    setAdding(false)
+    if (err) {
+      setError(err.code === '23505' ? 'משחק זה כבר ברשימה' : 'שגיאה בהוספה')
+      return
+    }
+    if (data) onGameAdded(data as ShiftGame)
+    setInputValue('')
+    setSuccess(true)
+    if (successTimer.current) clearTimeout(successTimer.current)
+    successTimer.current = setTimeout(() => setSuccess(false), 2500)
+    inputRef.current?.focus()
+  }
+
+  const removeGame = async (game: ShiftGame) => {
+    const { error: err } = await supabase.from('shift_games').delete().eq('id', game.id)
+    if (!err) onGameRemoved(game.id)
+  }
+
+  useEffect(() => () => { if (successTimer.current) clearTimeout(successTimer.current) }, [])
+
+  return (
+    <div className={`border-t px-5 py-4 ${accentBg}`}>
+      <p className={`text-[11px] font-mono font-semibold uppercase tracking-widest mb-3 ${labelColor}`}>
+        משחקים שהוזמנו
+      </p>
+
+      {/* Game chips */}
+      {sortedGames.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {sortedGames.map((game, i) => (
+            <div
+              key={game.id}
+              className={`group flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${chipCls}`}
+            >
+              <span className="font-mono opacity-40">{i + 1}.</span>
+              <span>{game.game_name}</span>
+              <button
+                type="button"
+                onClick={() => removeGame(game)}
+                aria-label="הסר משחק"
+                className="opacity-0 group-hover:opacity-100 transition-opacity w-4 h-4 flex items-center justify-center rounded-full text-current hover:bg-red-100 hover:text-red-600 font-bold text-sm leading-none"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {sortedGames.length === 0 && (
+        <p className="text-xs text-ink-400 italic mb-3">אין משחקים שהוזמנו עדיין</p>
+      )}
+
+      {/* Add input */}
+      <div className="flex gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          className="input text-sm py-2 flex-1"
+          placeholder="הוסף שם משחק..."
+          value={inputValue}
+          onChange={e => { setInputValue(e.target.value); setError(null) }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addGame() } }}
+          disabled={adding}
+        />
+        <button
+          type="button"
+          onClick={addGame}
+          disabled={!inputValue.trim() || adding}
+          className={`flex items-center justify-center w-10 h-10 rounded-xl text-lg font-bold transition-all duration-150 active:scale-95 disabled:opacity-40 shrink-0 ${btnCls}`}
+        >
+          {adding ? <Spinner size="sm" /> : '+'}
+        </button>
+      </div>
+
+      {success && (
+        <p className="text-xs text-emerald-600 font-mono font-semibold mt-2 flex items-center gap-1.5">
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          המשחק נוסף בהצלחה
+        </p>
+      )}
+      {error && <p className="text-xs text-red-500 font-mono mt-1.5">{error}</p>}
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export default function SchedulePage() {
-  const [shifts, setShifts]           = useState<ApprovedShift[]>([])
-  const [loading, setLoading]         = useState(true)
+  const [shifts,     setShifts]     = useState<ApprovedShift[]>([])
+  const [shiftGames, setShiftGames] = useState<ShiftGame[]>([])
+  const [loading,    setLoading]    = useState(true)
   const [lastUpdated, setLastUpdated] = useState(new Date())
-  const [expanded, setExpanded]       = useState<Set<string>>(new Set())
-  const [selectedName, setSelectedName]           = useState('all')
+  const [selectedName,      setSelectedName]      = useState('all')
   const [selectedShiftType, setSelectedShiftType] = useState<ShiftFilter>('all')
-  const [viewMode, setViewMode]       = useState<ViewMode>('list')
+  const [viewMode,  setViewMode]  = useState<ViewMode>('list')
   const [lightboxName, setLightboxName] = useState<string | null>(null)
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
 
-  const fetchShifts = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('approved_shifts')
-      .select('*')
-      .eq('status', 'approved')
-      .order('date',       { ascending: true })
-      .order('shift_type', { ascending: true })
-    if (!error && data) {
-      setShifts(data as ApprovedShift[])
-      setLastUpdated(new Date())
-    }
+  const fetchAll = useCallback(async () => {
+    const [shiftsRes, gamesRes] = await Promise.all([
+      supabase.from('approved_shifts').select('*').eq('status', 'approved').order('date').order('shift_type'),
+      supabase.from('shift_games').select('*').order('sort_order').order('created_at'),
+    ])
+    if (shiftsRes.data) setShifts(shiftsRes.data as ApprovedShift[])
+    if (gamesRes.data)  setShiftGames(gamesRes.data as ShiftGame[])
+    setLastUpdated(new Date())
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    fetchShifts()
+    fetchAll()
     const channel = supabase
       .channel('schedule_public')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'approved_shifts' }, fetchShifts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'approved_shifts' }, fetchAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_games' }, fetchAll)
       .subscribe()
-    const interval = setInterval(fetchShifts, 30000)
+    const interval = setInterval(fetchAll, 30000)
     return () => { supabase.removeChannel(channel); clearInterval(interval) }
-  }, [fetchShifts])
+  }, [fetchAll])
 
   const uniqueNames = useMemo(
     () => Array.from(new Set(shifts.map(s => s.name))).sort((a, b) => a.localeCompare(b, 'he')),
@@ -55,28 +192,57 @@ export default function SchedulePage() {
   )
 
   const filteredShifts = useMemo(
-    () => shifts.filter(s => {
-      const matchesName = selectedName      === 'all' || s.name       === selectedName
-      const matchesType = selectedShiftType === 'all' || s.shift_type === selectedShiftType
-      return matchesName && matchesType
-    }),
+    () => shifts.filter(s =>
+      (selectedName      === 'all' || s.name       === selectedName) &&
+      (selectedShiftType === 'all' || s.shift_type === selectedShiftType),
+    ),
     [shifts, selectedName, selectedShiftType],
   )
 
-  const grouped      = groupByDate(filteredShifts)
-  const sortedDates  = Object.keys(grouped).sort()
+  // Slot-based grouping: date+shiftType → workers + games
+  const slotData = useMemo<SlotData[]>(() => {
+    const map = new Map<string, SlotData>()
+    for (const shift of filteredShifts) {
+      const key = `${shift.date}|${shift.shift_type}`
+      if (!map.has(key)) {
+        map.set(key, {
+          date: shift.date,
+          shiftType: shift.shift_type as ShiftType,
+          workers: [],
+          games: shiftGames.filter(g => g.shift_date === shift.date && g.shift_type === shift.shift_type),
+        })
+      }
+      map.get(key)!.workers.push(shift)
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      a.date !== b.date ? a.date.localeCompare(b.date) : a.shiftType === 'morning' ? -1 : 1,
+    )
+  }, [filteredShifts, shiftGames])
 
+  const slotsByDate = useMemo(() => {
+    const result = new Map<string, SlotData[]>()
+    for (const slot of slotData) {
+      if (!result.has(slot.date)) result.set(slot.date, [])
+      result.get(slot.date)!.push(slot)
+    }
+    return result
+  }, [slotData])
+
+  const sortedDates = Array.from(slotsByDate.keys()).sort()
+
+  // Optimistic updates so UI feels instant
+  const handleGameAdded = useCallback((game: ShiftGame) => {
+    setShiftGames(prev => [...prev.filter(g => g.id !== game.id), game])
+  }, [])
+
+  const handleGameRemoved = useCallback((id: string) => {
+    setShiftGames(prev => prev.filter(g => g.id !== id))
+  }, [])
+
+  // Calendar helpers
   const today    = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }))
   const todayStr = toDateKey(today)
-
-  const toggle = (date: string) => {
-    setExpanded(prev => {
-      const next = new Set(prev)
-      next.has(date) ? next.delete(date) : next.add(date)
-      return next
-    })
-  }
-
+  const grouped  = groupByDate(filteredShifts)
   const monthLabel = calendarMonth.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
 
   const calendarCells = useMemo(() => {
@@ -84,17 +250,11 @@ export default function SchedulePage() {
     const startWeekDay = firstDay.getDay()
     const gridStart    = new Date(firstDay)
     gridStart.setDate(firstDay.getDate() - startWeekDay)
-
     return Array.from({ length: 42 }, (_, idx) => {
       const date    = new Date(gridStart)
       date.setDate(gridStart.getDate() + idx)
       const dateKey = toDateKey(date)
-      return {
-        date,
-        dateKey,
-        isCurrentMonth: date.getMonth() === calendarMonth.getMonth(),
-        shifts: grouped[dateKey] || [],
-      }
+      return { date, dateKey, isCurrentMonth: date.getMonth() === calendarMonth.getMonth(), shifts: grouped[dateKey] || [] }
     })
   }, [calendarMonth, grouped])
 
@@ -105,7 +265,6 @@ export default function SchedulePage() {
 
   return (
     <div className="animate-fade-in">
-      {/* Lightbox — portal-rendered, shown when a portrait is tapped */}
       {lightboxName && (
         <EmployeeLightbox name={lightboxName} onClose={() => setLightboxName(null)} />
       )}
@@ -148,9 +307,7 @@ export default function SchedulePage() {
                   type="button"
                   onClick={() => setViewMode(mode)}
                   className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                    viewMode === mode
-                      ? 'border-ink-700 bg-ink-50 text-ink-900'
-                      : 'border-ink-200 text-ink-600 bg-white'
+                    viewMode === mode ? 'border-ink-700 bg-ink-50 text-ink-900' : 'border-ink-200 text-ink-600 bg-white'
                   }`}
                 >
                   {mode === 'list' ? 'רשימה' : 'לוח שנה'}
@@ -161,127 +318,64 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {filteredShifts.length === 0 ? (
-        <EmptyState title={t.pages.schedule.empty} description={t.pages.schedule.emptyDesc} />
-      ) : viewMode === 'list' ? (
-        <>
-          {/* ── Desktop table ─────────────────────────────────────────── */}
-          <div className="hidden md:block card overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-parchment border-b border-ink-100">
-                  {['תאריך', 'עובד', 'משמרת', 'הערות'].map(h => (
-                    <th key={h} className="text-right px-5 py-3 text-xs font-mono text-ink-500 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedDates.map(date => {
-                  const isToday = date === todayStr
-                  return grouped[date].map((shift, idx) => (
-                    <tr key={shift.id} className="border-b border-ink-50 hover:bg-parchment/40 transition-colors">
-                      {idx === 0 && (
-                        <td
-                          className={`px-5 py-4 font-display font-semibold text-sm align-middle ${
-                            isToday ? 'bg-yellow-50 text-yellow-900' : 'text-ink-700'
-                          }`}
-                          rowSpan={grouped[date].length}
-                        >
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span>{formatDateHebrew(date)}</span>
-                            {isToday && (
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-900">
-                                היום
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      )}
-
-                      {/* Employee cell — avatar + name */}
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <EmployeeAvatar
-                            name={shift.name}
-                            shiftType={shift.shift_type as ShiftType}
-                            size="sm"
-                            onClick={() => setLightboxName(shift.name)}
-                          />
-                          <span className="font-medium text-ink-900">{shift.name}</span>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-3">
-                        <ShiftBadge type={shift.shift_type as ShiftType} />
-                      </td>
-                      <td className="px-5 py-3 text-sm text-ink-400">{shift.notes || '—'}</td>
-                    </tr>
-                  ))
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ── Mobile accordion ──────────────────────────────────────── */}
-          <div className="md:hidden flex flex-col gap-3">
+      {/* ── List view ─────────────────────────────────────────────────────── */}
+      {viewMode === 'list' ? (
+        slotData.length === 0 ? (
+          <EmptyState title={t.pages.schedule.empty} description={t.pages.schedule.emptyDesc} />
+        ) : (
+          <div className="flex flex-col gap-4">
             {sortedDates.map(date => {
-              const isOpen  = expanded.has(date)
               const isToday = date === todayStr
-
+              const slots   = slotsByDate.get(date)!
               return (
-                <div
-                  key={date}
-                  className={`card overflow-hidden ${isToday ? 'ring-1 ring-yellow-300 bg-yellow-50/40' : ''}`}
-                >
-                  <button
-                    onClick={() => toggle(date)}
-                    className="w-full flex items-center justify-between px-4 py-4 hover:bg-parchment/40 transition-colors text-right"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-display font-semibold text-ink-800 text-sm">
-                        {formatDateHebrew(date)}
-                      </span>
-                      {isToday && (
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-900">
-                          היום
-                        </span>
-                      )}
-                      <span className="text-xs font-mono text-ink-400">{grouped[date].length} משמרות</span>
-                    </div>
-                    <span className={`text-ink-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▾</span>
-                  </button>
+                <div key={date} className={`card overflow-hidden ${isToday ? 'ring-1 ring-yellow-300' : ''}`}>
+                  {/* Date header */}
+                  <div className={`px-5 py-3 border-b border-ink-100 flex items-center gap-3 ${isToday ? 'bg-yellow-50' : 'bg-parchment/40'}`}>
+                    <span className="font-display font-semibold text-ink-800">{formatDateHebrew(date)}</span>
+                    {isToday && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-900">היום</span>
+                    )}
+                  </div>
 
-                  {isOpen && (
-                    <div className="border-t border-ink-100 divide-y divide-ink-50">
-                      {grouped[date].map(shift => (
-                        <div key={shift.id} className="px-4 py-3.5 flex items-center justify-between gap-3">
-                          {/* Avatar + name + notes */}
-                          <div className="flex items-center gap-3 min-w-0">
-                            <EmployeeAvatar
-                              name={shift.name}
-                              shiftType={shift.shift_type as ShiftType}
-                              size="sm"
-                              onClick={() => setLightboxName(shift.name)}
-                            />
-                            <div className="min-w-0">
-                              <p className="font-medium text-ink-900">{shift.name}</p>
-                              {shift.notes && (
-                                <p className="text-xs text-ink-400 mt-0.5 truncate">{shift.notes}</p>
-                              )}
+                  {/* Shift slots */}
+                  {slots.map((slot, slotIdx) => (
+                    <div key={`${slot.date}|${slot.shiftType}`} className={slotIdx > 0 ? 'border-t-2 border-ink-100' : ''}>
+                      {/* Workers row */}
+                      <div className="px-5 py-4 flex items-center gap-4 flex-wrap">
+                        <ShiftBadge type={slot.shiftType} />
+                        <div className="flex items-center gap-4 flex-wrap">
+                          {slot.workers.map(w => (
+                            <div key={w.id} className="flex items-center gap-2">
+                              <EmployeeAvatar
+                                name={w.name}
+                                shiftType={slot.shiftType}
+                                size="sm"
+                                onClick={() => setLightboxName(w.name)}
+                              />
+                              <div>
+                                <p className="text-sm font-medium text-ink-800">{w.name}</p>
+                                {w.notes && <p className="text-xs text-ink-400 italic">{w.notes}</p>}
+                              </div>
                             </div>
-                          </div>
-                          <ShiftBadge type={shift.shift_type as ShiftType} />
+                          ))}
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Games panel */}
+                      <ShiftGamesPanel
+                        slot={slot}
+                        onGameAdded={handleGameAdded}
+                        onGameRemoved={handleGameRemoved}
+                      />
                     </div>
-                  )}
+                  ))}
                 </div>
               )
             })}
           </div>
-        </>
+        )
       ) : (
-        /* ── Calendar view ──────────────────────────────────────────── */
+        /* ── Calendar view ────────────────────────────────────────────────── */
         <div className="card p-4">
           <div className="flex items-center justify-between mb-4">
             <button type="button" className="btn-secondary text-sm px-3 py-2" onClick={goPrevMonth}>◀</button>

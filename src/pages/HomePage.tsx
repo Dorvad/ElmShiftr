@@ -4,9 +4,6 @@ import { supabase, type ShiftType } from '../lib/supabase'
 import { todayString } from '../lib/dateHelpers'
 import { ShiftBadge, Spinner, EmployeeAvatar, EmployeeLightbox } from '../components/ui'
 import MessageBoard from '../components/MessageBoard'
-import butcheryImg  from '../assets/butchery_button.png'
-import elmImg       from '../assets/elm_button.png'
-import wrongTurnImg from '../assets/wrongturn_button.png'
 
 type ShiftSlot = { date: string; shift_type: ShiftType; workers: string[] }
 
@@ -66,11 +63,6 @@ function useUpcomingShiftSlots() {
   return { slots, loading }
 }
 
-const manualVenueLinks = [
-  { venueKey: 'butchery',   venueName: 'הקצביה',      sourceUrl: 'https://www.escaperoom.co.il/tel-aviv-the-butchery',  image: butcheryImg  },
-  { venueKey: 'elm_street', venueName: 'אלם סטריט',   sourceUrl: 'https://www.escaperoom.co.il/tel-Aviv-elm-street',    image: elmImg       },
-  { venueKey: 'wrong_turn', venueName: 'טעות בכיוון', sourceUrl: 'https://www.escaperoom.co.il/tel-aviv-wrong-turn',    image: wrongTurnImg },
-]
 
 export default function HomePage() {
   const { slots, loading } = useUpcomingShiftSlots()
@@ -207,26 +199,6 @@ export default function HomePage() {
         </Link>
       </div>
 
-      {/* ── Venue game buttons ───────────────────────────────────── */}
-      <section className="max-w-3xl mx-auto">
-        <div className="card p-5 sm:p-6">
-          <div className="mb-5">
-            <p className="text-sm font-semibold text-ink-800">בדיקת משחקים שהוזמנו</p>
-            <p className="text-xs text-ink-500 mt-1">בדקו ישירות בכל אתר כדי לראות אילו שעות כבר נתפסו.</p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {manualVenueLinks.map((venue) => (
-              <a key={venue.venueKey} href={venue.sourceUrl} target="_blank" rel="noopener noreferrer" className="venue-btn">
-                <img src={venue.image} alt={venue.venueName} className="venue-btn__img" />
-                <div className="venue-btn__overlay">
-                  <p className="venue-btn__name">{venue.venueName}</p>
-                  <p className="venue-btn__hint">מעבר לעמוד ההזמנות<span className="venue-btn__arrow">←</span></p>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-      </section>
     </div>
   )
 }
