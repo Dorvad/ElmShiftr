@@ -53,15 +53,6 @@ export interface Employee {
   created_at: string
 }
 
-export interface ShiftGame {
-  id: string
-  shift_date: string
-  shift_type: ShiftType
-  game_name: string
-  sort_order: number
-  created_at: string
-}
-
 export type MessageType = 'info' | 'important' | 'admin'
 
 export interface Message {
