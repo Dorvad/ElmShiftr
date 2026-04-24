@@ -62,8 +62,9 @@ function BookedGamesSection({ date, bookings }: {
   const [saved,    setSaved]    = useState<GameBookings>(bookings ?? createEmptyBookings(date))
   const [editing,  setEditing]  = useState(false)
   const [draft,    setDraft]    = useState<Omit<GameBookings, 'date'>>({ elmStreet: [], butchery: [], wrongTurn: [] })
-  const [saving,   setSaving]   = useState(false)
-  const [showOK,   setShowOK]   = useState(false)
+  const [saving,    setSaving]    = useState(false)
+  const [showOK,    setShowOK]    = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Sync from parent (realtime from other clients) when not mid-edit
   useEffect(() => {
@@ -90,9 +91,13 @@ function BookedGamesSection({ date, bookings }: {
 
   const handleSave = async () => {
     setSaving(true)
+    setSaveError(null)
     const { error } = await saveBookingsForDate(date, draft)
     setSaving(false)
-    if (error) return
+    if (error) {
+      setSaveError(error.message)
+      return
+    }
     setSaved({ date, ...draft })
     setEditing(false)
     setShowOK(true)
@@ -224,6 +229,11 @@ function BookedGamesSection({ date, bookings }: {
         >
           {saving ? <><Spinner size="sm" />שומר...</> : 'שמור הזמנות'}
         </button>
+        {saveError && (
+          <p className="text-xs text-red-600 font-mono mt-2 px-1">
+            שגיאה: {saveError}
+          </p>
+        )}
       </div>
     </div>
   )

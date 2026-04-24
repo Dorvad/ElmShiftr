@@ -85,12 +85,14 @@ export async function saveBookingsForDate(
   date: string,
   bookings: Omit<GameBookings, 'date'>,
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from('game_bookings').upsert({
-    date,
-    elm_street_slots: sortSlots(bookings.elmStreet, ELM_STREET_SLOTS),
-    butchery_slots:   sortSlots(bookings.butchery,  SHARED_SLOTS),
-    wrong_turn_slots: sortSlots(bookings.wrongTurn,  SHARED_SLOTS),
-    updated_at: new Date().toISOString(),
-  })
+  const { error } = await supabase.from('game_bookings').upsert(
+    {
+      date,
+      elm_street_slots: sortSlots(bookings.elmStreet, ELM_STREET_SLOTS),
+      butchery_slots:   sortSlots(bookings.butchery,  SHARED_SLOTS),
+      wrong_turn_slots: sortSlots(bookings.wrongTurn,  SHARED_SLOTS),
+    },
+    { onConflict: 'date' },
+  )
   return { error: error ? new Error(error.message) : null }
 }
