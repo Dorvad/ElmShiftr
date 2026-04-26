@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase, type ApprovedShift } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { todayString, formatDateHebrew } from '../lib/dateHelpers'
-import { Alert, ShiftBadge, Spinner } from '../components/ui'
+import { Alert, ShiftBadge, Spinner, LoadingAnimation } from '../components/ui'
 import { useEmployees } from '../hooks/useEmployees'
 
 export default function CancelPage() {
@@ -115,7 +115,7 @@ export default function CancelPage() {
           </div>
 
           {loadingShifts ? (
-            <div className="flex justify-center py-10"><Spinner /></div>
+            <div className="flex justify-center py-6"><LoadingAnimation /></div>
           ) : shifts.length === 0 ? (
             <div className="py-10 text-center px-6">
               <div className="w-10 h-10 rounded-full bg-ink-100 flex items-center justify-center text-ink-300 text-xl font-mono mx-auto mb-3">—</div>

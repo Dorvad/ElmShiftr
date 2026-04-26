@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import Lottie from 'lottie-react'
 import { t } from '../lib/i18n'
 import type { ShiftType, RequestStatus, ApprovedShiftStatus, CancelStatus } from '../lib/supabase'
 import avivImg  from '../assets/Aviv.png'
 import dorImg   from '../assets/Dor.png'
 import stevenImg from '../assets/Steven.png'
 import yahavImg from '../assets/Yahav.png'
+import loadingAnimationRaw from '../assets/loadinganimation.json?raw'
 
 // ── Employee portraits ────────────────────────────────────────────────────────
 
@@ -173,8 +175,32 @@ export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 export function LoadingState({ message = 'טוען...' }: { message?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-4 text-ink-400">
-      <Spinner size="lg" />
+      <LoadingAnimation size="lg" />
       <span className="text-sm">{message}</span>
+    </div>
+  )
+}
+
+export function LoadingAnimation({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const cls = { sm: 'w-16 h-16', md: 'w-24 h-24', lg: 'w-32 h-32' }
+  let animationData: object | null = null
+  try {
+    animationData = JSON.parse(loadingAnimationRaw)
+  } catch {
+    animationData = null
+  }
+
+  if (!animationData) {
+    return (
+      <div className={`${cls[size]} text-ink-500 flex items-center justify-center`}>
+        <Spinner size={size === 'sm' ? 'sm' : size === 'md' ? 'md' : 'lg'} />
+      </div>
+    )
+  }
+
+  return (
+    <div className={`${cls[size]} text-ink-500`} aria-label="loading animation">
+      <Lottie animationData={animationData} loop autoplay />
     </div>
   )
 }
