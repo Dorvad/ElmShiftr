@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, type ShiftType } from '../lib/supabase'
 import { todayString } from '../lib/dateHelpers'
-import { ShiftBadge, Spinner, EmployeeAvatar, EmployeeLightbox } from '../components/ui'
+import { ShiftBadge, LoadingAnimation, EmployeeAvatar, EmployeeLightbox } from '../components/ui'
 import MessageBoard from '../components/MessageBoard'
 
 type ShiftSlot = { date: string; shift_type: ShiftType; workers: string[] }
@@ -104,7 +104,7 @@ export default function HomePage() {
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-12"><Spinner /></div>
+            <div className="flex justify-center py-10"><LoadingAnimation /></div>
           ) : slots.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-sm text-ink-400">אין משמרות קרובות מאושרות</p>

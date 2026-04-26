@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { supabase, type ShiftType } from '../lib/supabase'
 import { t } from '../lib/i18n'
 import { todayString } from '../lib/dateHelpers'
-import { Alert, Spinner } from '../components/ui'
+import { Alert, Spinner, LoadingAnimation } from '../components/ui'
 import { useEmployees } from '../hooks/useEmployees'
 
 interface ShiftRow {
@@ -126,6 +126,11 @@ export default function RequestPage() {
           {/* Name */}
           <div>
             <label className="label">{t.form.name} *</label>
+            {employeesLoading && (
+              <div className="flex justify-center py-2">
+                <LoadingAnimation size="sm" />
+              </div>
+            )}
             <select
               className="input"
               value={name}
