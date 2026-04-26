@@ -7,7 +7,7 @@ import avivImg  from '../assets/Aviv.png'
 import dorImg   from '../assets/Dor.png'
 import stevenImg from '../assets/Steven.png'
 import yahavImg from '../assets/Yahav.png'
-import loadingAnimationRaw from '../assets/loadinganimation.json?raw'
+import loadingAnimation from '../assets/loadinganimation.json'
 
 // ── Employee portraits ────────────────────────────────────────────────────────
 
@@ -183,24 +183,9 @@ export function LoadingState({ message = 'טוען...' }: { message?: string }) 
 
 export function LoadingAnimation({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const cls = { sm: 'w-16 h-16', md: 'w-24 h-24', lg: 'w-32 h-32' }
-  let animationData: object | null = null
-  try {
-    animationData = JSON.parse(loadingAnimationRaw)
-  } catch {
-    animationData = null
-  }
-
-  if (!animationData) {
-    return (
-      <div className={`${cls[size]} text-ink-500 flex items-center justify-center`}>
-        <Spinner size={size === 'sm' ? 'sm' : size === 'md' ? 'md' : 'lg'} />
-      </div>
-    )
-  }
-
   return (
     <div className={`${cls[size]} text-ink-500`} aria-label="loading animation">
-      <Lottie animationData={animationData} loop autoplay />
+      <Lottie animationData={loadingAnimation} loop autoplay />
     </div>
   )
 }
